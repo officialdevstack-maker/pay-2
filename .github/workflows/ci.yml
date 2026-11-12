@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spurs_pay
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: production
+      APP_URL: https://pay.example.test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/spurs_pay
+      DATABASE_URL_UNPOOLED: postgres://postgres:postgres@localhost:5432/spurs_pay
+      SESSION_SECRET: ci-only-session-secret-ci-only-session-secret
+      ACCOUNTS_ISSUER: https://accounts.example.test/api/oidc
+      ACCOUNTS_CLIENT_ID: ci
+      ACCOUNTS_CLIENT_SECRET: ci
+      PAYMENTS_DRIVER: ci-placeholder
+      PAYMENTS_SECRET_KEY: ci
+      PAYMENTS_WEBHOOK_HASH: ci
+      PAYMENTS_WEBHOOK_TOKEN: ci-only-webhook-token-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:leaks:source
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Migrations apply to a clean database
+        run: npm run db:migrate
+      - run: npm run build
+      - name: Provider names must not reach the browser
+        run: npm run check:leaks
