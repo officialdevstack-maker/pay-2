@@ -6,6 +6,10 @@ import * as schema from './schema';
 
 const globalForDb = globalThis as unknown as { __pool?: Pool };
 
+if (!env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required before using the database.');
+}
+
 const pool = globalForDb.__pool ?? new Pool({ connectionString: env.DATABASE_URL, max: 5 });
 if (env.NODE_ENV !== 'production') globalForDb.__pool = pool;
 

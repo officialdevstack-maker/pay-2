@@ -5,7 +5,7 @@ const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     APP_URL: z.url(),
-    DATABASE_URL: z.string().min(1),
+    DATABASE_URL: z.string().optional().default(''),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
     ACCOUNTS_ISSUER: z.url(),
     ACCOUNTS_CLIENT_ID: z.string().min(1),
@@ -18,6 +18,14 @@ const schema = z
     PAYMENTS_WEBHOOK_TOKEN: z.string().default(''),
   })
   .superRefine((value, ctx) => {
+    if (value.NODE_ENV === 'production' && !value.DATABASE_URL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['DATABASE_URL'],
+        message: 'DATABASE_URL is required in production.',
+      });
+    }
+
     if (value.NODE_ENV === 'production' && value.PAYMENTS_DRIVER === 'mock') {
       ctx.addIssue({
         code: 'custom',

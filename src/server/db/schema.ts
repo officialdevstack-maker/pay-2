@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -137,5 +138,27 @@ export const idempotencyKeys = pgTable(
     check('idempotency_scope_chk', sql`length(trim(${t.scope})) between 1 and 128`),
     check('idempotency_key_chk', sql`length(trim(${t.key})) between 1 and 200`),
     check('idempotency_hash_chk', sql`${t.requestHash} ~ '^[a-f0-9]{64}$'`),
+  ],
+);
+
+export const webhookEvents = pgTable(
+  'webhook_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    driver: text('driver').notNull(),
+    /** The provider's own event id. Internal only, never serialised to a client. */
+    eventId: text('event_id').notNull(),
+    type: text('type').notNull(),
+    rawBody: text('raw_body').notNull(),
+    status: text('status').$type<'received' | 'processed' | 'failed'>().notNull().default('received'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('webhook_events_driver_event_uq').on(t.driver, t.eventId),
+    index('webhook_events_pending_idx').on(t.status, t.receivedAt),
+    check('webhook_events_status_chk', sql`${t.status} in ('received', 'processed', 'failed')`),
   ],
 );

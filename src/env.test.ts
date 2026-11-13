@@ -30,6 +30,11 @@ describe('env', () => {
     15_000,
   );
 
+  it('allows a blank database URL in local test runs', async () => {
+    const { env } = await load({ DATABASE_URL: '' });
+    expect(env.DATABASE_URL).toBe('');
+  });
+
   it('fails boot on a short session secret', async () => {
     await expect(load({ SESSION_SECRET: 'short' })).rejects.toThrow(/SESSION_SECRET/);
   });
