@@ -54,15 +54,20 @@ export function cookieOptions() {
   };
 }
 
-function authTimeOf(claims: IdTokenClaims): number {
-  return typeof claims.auth_time === 'number' ? claims.auth_time : Math.floor(Date.now() / 1000);
+function authTimeOf(claims: IdTokenClaims, required: boolean): number {
+  const value = claims.auth_time;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (required) {
+    throw new AppError('UNAUTHENTICATED', 'Please confirm your sign-in again.', 401);
+  }
+  return Math.floor(Date.now() / 1000);
 }
 
-function asUser(claims: IdTokenClaims): StoredUser {
+function asUser(claims: IdTokenClaims, options: { requireAuthTime?: boolean } = {}): StoredUser {
   if (!claims.sub) throw new AppError('UNAUTHENTICATED', 'Sign-in did not return a valid user.', 401);
   return {
     sub: claims.sub,
-    auth_time: authTimeOf(claims),
+    auth_time: authTimeOf(claims, Boolean(options.requireAuthTime)),
     ...(typeof claims.name === 'string' && { name: claims.name }),
     ...(typeof claims.preferred_username === 'string' && { username: claims.preferred_username }),
     ...(typeof claims.email === 'string' && { email: claims.email }),
@@ -118,7 +123,7 @@ export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: st
   const context = decrypt<AuthContext>(pending.encryptedContext);
   const tokens = await authClient().exchangeCode(callback, context);
   if (!tokens.claims) throw new AppError('UNAUTHENTICATED', 'Sign-in did not return a verified identity.', 401);
-  const user = asUser(tokens.claims);
+  const user = asUser(tokens.claims, { requireAuthTime: context.stepUp });
 
   const authAge = Date.now() / 1000 - (user.auth_time ?? 0);
   if (context.stepUp && (authAge < -30 || authAge > AUTH.stepUpMaxAgeSeconds + 30)) {

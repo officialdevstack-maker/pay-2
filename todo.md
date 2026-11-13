@@ -102,20 +102,20 @@ src/
 - [x] Verified (shell renders, CI configured, env tests cover boot failure)
 
 ### Phase 2: Sign-in with Spurs Accounts (BFF)
-- [ ] Register Spurs Pay in Accounts as a **first-party confidential** client (`oidc:client:create "Spurs Pay" --first-party ...`), with redirect and post-logout URIs
+- [x] Register Spurs Pay in Accounts as a **first-party confidential** client (`oidc:client:create "Spurs Pay" --first-party ...`), with redirect and post-logout URIs
 - [x] Install `@spurs/auth` (GitHub Packages scope `@spurs`: add `.npmrc` with a read token locally and in CI)
-- [ ] `/api/auth/login`: `createAuthorizationRequest`, keep state, nonce and verifier in a short-lived server session, redirect
-- [ ] `/api/auth/callback`: `exchangeCode`, verify ID token, create the encrypted session, redirect to `returnTo` (same-origin only)
-- [ ] Session stores tokens server-side only. The browser never sees an access or refresh token
-- [ ] **Single-flight refresh** per session (lock or in-memory promise map plus DB/Redis lock). Never refresh in parallel: Accounts treats refresh reuse outside the grace window as theft and revokes the grant
-- [ ] Logout: revoke refresh token, clear the session, optionally `signOutEverywhere`
-- [ ] Route protection in middleware plus a server-side `requireUser()` used by every action (stub: dev-only `requireUser` in `src/modules/identity`, rejects in production)
-- [ ] **Status guard**: on money actions call Accounts `/api/internal/users/{id}` with a `users:read` service token, reject if `suspendedAt` is set; cache 30 to 60s. (Introspection alone does not catch suspension.)
-- [ ] Require `email_verified` before any send or withdrawal; show a clear "verify your email" state
-- [ ] Step-up: sensitive actions (add bank account, change PIN) re-auth with `prompt=login&max_age=300`
-- [ ] Map `sub` (Accounts user id) to `pay_users` on first login (create on first sight); call `ensureWallet` here (`pay_users` table exists)
+- [x] `/auth/login`: `createAuthorizationRequest`, keep state, nonce and verifier in a short-lived encrypted server-side record, redirect
+- [x] `/auth/callback`: `exchangeCode` verifies the ID token, creates the encrypted session, and redirects to same-origin `returnTo`
+- [x] Session stores tokens server-side only. The browser receives only the opaque session cookie
+- [x] **Single-flight refresh** per session uses a database row lock; never refresh in parallel
+- [x] Logout revokes the refresh token, clears the session, and redirects through the Accounts end-session endpoint when available
+- [x] Route protection in `src/proxy.ts` plus server-side `requireUser()`/API guards
+- [x] **Status guard**: money actions call Accounts `/api/internal/users/{id}` with a `users:read` service token, reject if `suspendedAt` is set; cached for 45s
+- [x] Require `email_verified` before current send/withdraw actions; show a clear "verify your email" error
+- [ ] Step-up: helper requests `prompt=login&max_age=300`; consumers will be added with change-PIN and add-bank flows
+- [x] Map `sub` (Accounts user id) to `pay_users` on first login and call `ensureWallet`
 
-**Done when:** login, logout, expiry, concurrent refresh and a suspended user are all covered by tests, and no token appears in any client response.
+**Done when:** the Accounts client is registered and the login/logout smoke test passes; DB-gated tests cover login, logout, expiry, concurrent refresh and suspension, and no token appears in any client response.
 
 ### Phase 3: Ledger core
 - [x] Schema: `ledger_accounts`, `transactions`, `ledger_entries`, `idempotency_keys` (+ `wallets` with `product`, `currency`, cached `balance`, `version`)

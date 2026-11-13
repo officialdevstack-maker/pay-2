@@ -23,7 +23,7 @@ integration('session resolution', () => {
 
   beforeEach(() => mocks.refresh.mockReset());
 
-  async function createSession(expiresAt: number) {
+  async function createSession(expiresAt: number, sessionExpiresAt = new Date(Date.now() + 3_600_000)) {
     const [user] = await db
       .insert(payUsers)
       .values({ accountsSub: `session-test-${randomUUID()}` })
@@ -35,7 +35,7 @@ integration('session resolution', () => {
       userId: user.id,
       user: { sub: 'sub' },
       encryptedTokens: encrypt({ accessToken: 'old', refreshToken: 'r1', expiresAt }),
-      expiresAt: new Date(Date.now() + 3_600_000),
+      expiresAt: sessionExpiresAt,
     });
     return id;
   }
@@ -44,6 +44,14 @@ integration('session resolution', () => {
     const id = await createSession(inSeconds(600));
     expect(await resolveSession(id)).not.toBeNull();
     expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it('deletes an expired session', async () => {
+    const id = await createSession(inSeconds(600), new Date(Date.now() - 1_000));
+
+    expect(await resolveSession(id)).toBeNull();
+    const rows = await db.select({ id: authSessions.id }).from(authSessions).where(eq(authSessions.id, id));
+    expect(rows).toHaveLength(0);
   });
 
   it('refreshes only once for concurrent requests', async () => {
