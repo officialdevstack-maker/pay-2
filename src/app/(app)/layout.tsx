@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import { requireUser } from '@/modules/identity';
 
 const NAV = [
   { label: 'Home', href: '/', ready: true },
@@ -8,11 +9,19 @@ const NAV = [
   { label: 'Settings', href: '/settings', ready: false },
 ] as const;
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col pt-[env(safe-area-inset-top)]">
       <header className="flex h-14 items-center justify-between px-5">
         <span className="text-lg font-bold tracking-tight">Spurs Pay</span>
+        <div className="flex items-center gap-3">
+          <span className="max-w-32 truncate text-sm text-muted">{user.name ?? user.email}</span>
+          <Link href="/auth/logout" className="text-sm font-semibold text-primary">
+            Sign out
+          </Link>
+        </div>
       </header>
 
       <main className="flex-1 px-5 pb-28">{children}</main>

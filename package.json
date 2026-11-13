@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@fontsource-variable/figtree": "^5.2.6",
+    "@officialdevstack-maker/auth": "^0.1.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.2",
     "next": "16.4.6",

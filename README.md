@@ -30,5 +30,11 @@ npm run check:leaks
 ```
 
 The build requires the environment variables documented in `.env.example`.
+Register a first-party confidential Spurs Accounts client with the callback
+`${APP_URL}/auth/callback` and post-logout URI `${APP_URL}/signed-out`. Set
+`ACCOUNTS_CLIENT_ID` and `ACCOUNTS_CLIENT_SECRET` in `.env.local`; the SDK package
+is installed from GitHub Packages, so set `NPM_TOKEN` to a token with `read:packages`
+before installing dependencies.
+
 PostgreSQL-backed ledger tests run only when `LEDGER_TEST_DATABASE_URL` is set to the
 same disposable test database as `DATABASE_URL`; CI provisions and migrates this database.

@@ -39,6 +39,10 @@ describe('env', () => {
     await expect(load({ SESSION_SECRET: 'short' })).rejects.toThrow(/SESSION_SECRET/);
   });
 
+  it('requires an Accounts client secret', async () => {
+    await expect(load({ ACCOUNTS_CLIENT_SECRET: '' })).rejects.toThrow(/ACCOUNTS_CLIENT_SECRET/);
+  });
+
   it('refuses the mock driver in production', async () => {
     await expect(load({ NODE_ENV: 'production' })).rejects.toThrow(/mock driver/);
   });

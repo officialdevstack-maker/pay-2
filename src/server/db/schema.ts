@@ -21,6 +21,44 @@ export const payUsers = pgTable('pay_users', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const oidcAuthRequests = pgTable(
+  'oidc_auth_requests',
+  {
+    stateHash: text('state_hash').primaryKey(),
+    encryptedContext: text('encrypted_context').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('oidc_auth_requests_expires_idx').on(t.expiresAt)],
+);
+
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => payUsers.id, { onDelete: 'cascade' }),
+    user: jsonb('user')
+      .$type<{
+        sub: string;
+        name?: string;
+        username?: string;
+        email?: string;
+        email_verified?: boolean;
+      }>()
+      .notNull(),
+    encryptedTokens: text('encrypted_tokens').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('auth_sessions_user_idx').on(t.userId),
+    index('auth_sessions_expires_idx').on(t.expiresAt),
+    check('auth_sessions_id_chk', sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+  ],
+);
+
 export const ledgerAccounts = pgTable(
   'ledger_accounts',
   {
