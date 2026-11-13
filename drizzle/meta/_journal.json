@@ -36,6 +36,13 @@
       "when": 1794553421122,
       "tag": "0004_magical_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794572037597,
+      "tag": "0005_burly_warpath",
+      "breakpoints": true
     }
   ]
 }

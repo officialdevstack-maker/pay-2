@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, desc, eq, gte, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { AppError } from '@/lib/errors';
 import { checkTag } from '@/lib/tag';
 import { db } from '@/server/db/client';
