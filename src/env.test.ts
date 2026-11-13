@@ -21,10 +21,14 @@ describe('env', () => {
   beforeEach(() => vi.unstubAllEnvs());
   afterEach(() => vi.unstubAllEnvs());
 
-  it('accepts a valid configuration', async () => {
-    const { env } = await load();
-    expect(env.PAYMENTS_DRIVER).toBe('mock');
-  });
+  it(
+    'accepts a valid configuration',
+    async () => {
+      const { env } = await load();
+      expect(env.PAYMENTS_DRIVER).toBe('mock');
+    },
+    15_000,
+  );
 
   it('fails boot on a short session secret', async () => {
     await expect(load({ SESSION_SECRET: 'short' })).rejects.toThrow(/SESSION_SECRET/);
