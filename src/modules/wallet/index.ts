@@ -4,8 +4,11 @@ import { db } from '@/server/db/client';
 import { wallets } from '@/server/db/schema';
 import { openAccount } from '@/modules/ledger';
 import { AppError } from '@/lib/errors';
+import type { Product } from './types';
 
-export type Product = 'pay' | 'wallet';
+export type { Product } from './types';
+export { assertTransferAllowed } from './limits';
+export { changePin, setPin, verifyPin } from './pin';
 
 export async function ensureWallet(userId: string, product: Product = 'pay') {
   return db.transaction(async (tx) => {

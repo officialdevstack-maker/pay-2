@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gt, lt, sql } from 'drizzle-orm';
 import type { IdTokenClaims, TokenSet } from '@officialdevstack-maker/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -128,14 +128,14 @@ export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: st
     throw new AppError('UNAUTHENTICATED', 'Please confirm your sign-in again.', 401);
   }
 
-  const [created] = await db
+  const [payUser] = await db
     .insert(payUsers)
-    .values({ accountsSub: user.sub })
-    .onConflictDoNothing({ target: payUsers.accountsSub })
+    .values({ accountsSub: user.sub, displayName: user.name ?? null })
+    .onConflictDoUpdate({
+      target: payUsers.accountsSub,
+      set: { displayName: sql`coalesce(excluded.display_name, ${payUsers.displayName})` },
+    })
     .returning({ id: payUsers.id });
-  const [payUser] = created
-    ? [created]
-    : await db.select({ id: payUsers.id }).from(payUsers).where(eq(payUsers.accountsSub, user.sub)).limit(1);
   if (!payUser) throw new AppError('INTERNAL', 'Could not create the Pay account.');
   await ensureWallet(payUser.id, 'pay');
 

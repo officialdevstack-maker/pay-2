@@ -9,6 +9,12 @@ export function proxy(request: NextRequest) {
   }
 
   if (!request.cookies.get(SESSION_COOKIE)?.value) {
+    if (path.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHENTICATED', message: 'Sign in to continue.' } },
+        { status: 401, headers: { 'cache-control': 'no-store' } },
+      );
+    }
     const login = new URL('/auth/login', request.url);
     login.searchParams.set('returnTo', `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(login);

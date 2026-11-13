@@ -15,11 +15,22 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
-export const payUsers = pgTable('pay_users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  accountsSub: text('accounts_sub').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const payUsers = pgTable(
+  'pay_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountsSub: text('accounts_sub').notNull().unique(),
+    tag: text('tag').unique(),
+    displayName: text('display_name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      'pay_users_tag_chk',
+      sql`${t.tag} is null or (${t.tag} ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' and length(${t.tag}) between 3 and 20)`,
+    ),
+  ],
+);
 
 export const oidcAuthRequests = pgTable(
   'oidc_auth_requests',
@@ -200,4 +211,77 @@ export const webhookEvents = pgTable(
     index('webhook_events_pending_idx').on(t.status, t.receivedAt),
     check('webhook_events_status_chk', sql`${t.status} in ('received', 'processed', 'failed')`),
   ],
+);
+
+export const beneficiaries = pgTable(
+  'beneficiaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => payUsers.id),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => payUsers.id),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }).notNull().defaultNow(),
+    sendCount: integer('send_count').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('beneficiaries_owner_recipient_uq').on(t.ownerId, t.recipientId),
+    index('beneficiaries_owner_recent_idx').on(t.ownerId, t.lastSentAt),
+    check('beneficiaries_not_self_chk', sql`${t.ownerId} <> ${t.recipientId}`),
+  ],
+);
+
+export const walletPins = pgTable(
+  'wallet_pins',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => payUsers.id, { onDelete: 'cascade' }),
+    product: text('product').$type<'pay' | 'wallet'>().notNull(),
+    salt: text('salt').notNull(),
+    hash: text('hash').notNull(),
+    failedAttempts: integer('failed_attempts').notNull().default(0),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.product] }),
+    check('wallet_pins_product_chk', sql`${t.product} in ('pay', 'wallet')`),
+    check('wallet_pins_attempts_chk', sql`${t.failedAttempts} >= 0`),
+  ],
+);
+
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    rule: text('rule').notNull(),
+    keyHash: text('key_hash').notNull(),
+    windowStartedAt: timestamp('window_started_at', { withTimezone: true }).notNull(),
+    count: integer('count').notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ columns: [t.rule, t.keyHash] }),
+    check('rate_limits_key_hash_chk', sql`${t.keyHash} ~ '^[a-f0-9]{64}$'`),
+    check('rate_limits_count_chk', sql`${t.count} > 0`),
+  ],
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => payUsers.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    reference: text('reference'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('notifications_user_recent_idx').on(t.userId, t.createdAt)],
 );

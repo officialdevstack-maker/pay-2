@@ -7,6 +7,7 @@ const schema = z
     APP_URL: z.url(),
     DATABASE_URL: z.string().optional().default(''),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
+    PIN_PEPPER: z.string().min(32, 'PIN_PEPPER must be at least 32 characters').optional(),
     ACCOUNTS_ISSUER: z.url(),
     ACCOUNTS_CLIENT_ID: z.string().min(1),
     ACCOUNTS_CLIENT_SECRET: z.string().min(1),
@@ -23,6 +24,14 @@ const schema = z
         code: 'custom',
         path: ['DATABASE_URL'],
         message: 'DATABASE_URL is required in production.',
+      });
+    }
+
+    if (value.NODE_ENV === 'production' && !value.PIN_PEPPER) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PIN_PEPPER'],
+        message: 'PIN_PEPPER is required in production.',
       });
     }
 

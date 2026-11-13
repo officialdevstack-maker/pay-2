@@ -5,6 +5,7 @@ const GOOD = {
   APP_URL: 'http://localhost:3000',
   DATABASE_URL: 'postgres://u:p@localhost/db',
   SESSION_SECRET: 'x'.repeat(32),
+  PIN_PEPPER: 'y'.repeat(32),
   ACCOUNTS_ISSUER: 'https://accounts.test/api/oidc',
   ACCOUNTS_CLIENT_ID: 'id',
   ACCOUNTS_CLIENT_SECRET: 'secret',
