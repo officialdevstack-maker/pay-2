@@ -5,7 +5,7 @@ import { ledgerEntries, transactions } from '@/server/db/schema';
 import { isUniqueViolation } from '@/lib/db-errors';
 import { AppError } from '@/lib/errors';
 import { post } from './post';
-import type { Currency, PostedTransaction } from './types';
+import type { PostedTransaction } from './types';
 
 export interface ReverseInput {
   transactionId: string;
@@ -24,6 +24,9 @@ async function run(tx: Tx, input: ReverseInput): Promise<PostedTransaction> {
   if (original.reversesTransactionId) {
     throw new AppError('LEDGER_INVALID', 'A reversal cannot itself be reversed.', 422);
   }
+  if (original.currency !== 'NGN') {
+    throw new AppError('CURRENCY_MISMATCH', 'The transaction currency is not supported.', 422);
+  }
 
   const entries = await tx
     .select()
@@ -35,7 +38,7 @@ async function run(tx: Tx, input: ReverseInput): Promise<PostedTransaction> {
     return await post(
       {
         type: 'reversal',
-        currency: original.currency as Currency,
+        currency: original.currency,
         idempotency: input.idempotency,
         reversesTransactionId: original.id,
         metadata: { original: original.reference, reason: input.reason ?? null },

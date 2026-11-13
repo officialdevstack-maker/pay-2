@@ -5,13 +5,14 @@ import { idempotencyKeys, ledgerAccounts, ledgerEntries, transactions } from '@/
 import { AppError } from '@/lib/errors';
 import { newReference } from '@/lib/ids';
 import type { PostedEntry, PostedTransaction, PostInput } from './types';
-import { requestHash, validateEntries } from './validate';
+import { requestHash, validateEntries, validatePostInput } from './validate';
 
 /**
  * Posts one balanced transaction atomically. Pass `tx` to join an outer DB transaction.
  * Replays with the same (scope, key) and the same request return the original result.
  */
 export async function post(input: PostInput, tx?: Tx): Promise<PostedTransaction> {
+  validatePostInput(input);
   validateEntries(input.entries);
   return tx ? postIn(tx, input) : db.transaction((inner) => postIn(inner, input));
 }
@@ -102,11 +103,11 @@ async function replay(tx: Tx, scope: string, key: string, hash: string): Promise
     .from(idempotencyKeys)
     .where(and(eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, key)))
     .limit(1);
-  if (!claim?.transactionId) {
-    throw new AppError('IDEMPOTENCY_IN_PROGRESS', 'This request is still being processed.', 409);
-  }
-  if (claim.requestHash !== hash) {
+  if (claim?.requestHash !== hash) {
     throw new AppError('IDEMPOTENCY_MISMATCH', 'This request key was already used for a different request.', 409);
+  }
+  if (!claim.transactionId) {
+    throw new AppError('IDEMPOTENCY_IN_PROGRESS', 'This request is still being processed.', 409);
   }
 
   const [txn] = await tx.select().from(transactions).where(eq(transactions.id, claim.transactionId)).limit(1);

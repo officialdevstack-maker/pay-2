@@ -1,1 +1,0 @@
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_reference_check" CHECK ("transactions"."reference" ~ '^SPY_[A-F0-9]{32}$');

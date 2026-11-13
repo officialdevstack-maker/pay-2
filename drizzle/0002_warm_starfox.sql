@@ -1,0 +1,3 @@
+ALTER TABLE "ledger_accounts" DROP CONSTRAINT "ledger_accounts_balance_chk";--> statement-breakpoint
+ALTER TABLE "ledger_accounts" ADD CONSTRAINT "ledger_accounts_negative_balance_chk" CHECK ("ledger_accounts"."allow_negative" or "ledger_accounts"."balance" >= 0);--> statement-breakpoint
+ALTER TABLE "ledger_accounts" ADD CONSTRAINT "ledger_accounts_wallet_allow_negative_chk" CHECK ("ledger_accounts"."kind" = 'system' or not "ledger_accounts"."allow_negative");

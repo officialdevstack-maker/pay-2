@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
+import type * as Ledger from './index';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 
 describe.skipIf(!hasDb)('ledger (postgres)', () => {
-  let L: typeof import('./index');
+  let L!: typeof Ledger;
   const scope = 'test';
   const key = () => `k_${randomUUID()}`;
 

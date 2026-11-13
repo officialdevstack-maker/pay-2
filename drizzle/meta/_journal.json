@@ -12,15 +12,22 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1794549626584,
-      "tag": "0001_cute_nitro",
+      "when": 1794550904635,
+      "tag": "0001_busy_scarlet_spider",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1794549891256,
-      "tag": "0002_gray_spacker_dave",
+      "when": 1794551155174,
+      "tag": "0002_warm_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794551430490,
+      "tag": "0003_daily_speedball",
       "breakpoints": true
     }
   ]

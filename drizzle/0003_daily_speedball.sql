@@ -1,0 +1,1 @@
+ALTER TABLE "ledger_accounts" ADD CONSTRAINT "ledger_accounts_system_code_chk" CHECK ("ledger_accounts"."code" is null or "ledger_accounts"."code" in ('provider_clearing', 'fees', 'suspense', 'settlement'));

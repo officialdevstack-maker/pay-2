@@ -1,8 +1,8 @@
 # Spurs Pay
 
 Spurs Pay is a payments app scaffold built with Next.js, TypeScript, Tailwind CSS,
-PostgreSQL, and Drizzle ORM. The current app is a UI shell; authentication and
-money movement are not implemented yet.
+PostgreSQL, and Drizzle ORM. The current app is a UI shell with a ledger core;
+authentication and production money-movement integrations are not implemented yet.
 
 ## Getting started
 

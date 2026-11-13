@@ -35,7 +35,8 @@ export async function openAccount(
 const systemIds = new Map<string, string>();
 
 export async function systemAccountId(code: SystemAccountCode, executor: Executor = db): Promise<string> {
-  const cached = systemIds.get(code);
+  const canCache = executor === db;
+  const cached = canCache ? systemIds.get(code) : undefined;
   if (cached) return cached;
 
   await executor
@@ -48,7 +49,7 @@ export async function systemAccountId(code: SystemAccountCode, executor: Executo
     .where(eq(ledgerAccounts.code, code))
     .limit(1);
   if (!row) throw new AppError('INTERNAL', 'System account missing.');
-  systemIds.set(code, row.id);
+  if (canCache) systemIds.set(code, row.id);
   return row.id;
 }
 

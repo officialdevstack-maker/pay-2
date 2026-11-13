@@ -43,8 +43,16 @@ export const ledgerAccounts = pgTable(
       sql`(${t.kind} = 'system' and ${t.code} is not null) or (${t.kind} = 'wallet' and ${t.code} is null)`,
     ),
     check(
-      'ledger_accounts_balance_chk',
-      sql`${t.kind} = 'system' or (not ${t.allowNegative} and ${t.balance} >= 0)`,
+      'ledger_accounts_system_code_chk',
+      sql`${t.code} is null or ${t.code} in ('provider_clearing', 'fees', 'suspense', 'settlement')`,
+    ),
+    check(
+      'ledger_accounts_negative_balance_chk',
+      sql`${t.allowNegative} or ${t.balance} >= 0`,
+    ),
+    check(
+      'ledger_accounts_wallet_allow_negative_chk',
+      sql`${t.kind} = 'system' or not ${t.allowNegative}`,
     ),
   ],
 );

@@ -12,7 +12,7 @@ export interface EntryInput {
 
 export interface PostInput {
   type: string; // 'funding' | 'transfer' | 'payout' | 'fee' | 'reversal' | ...
-  currency?: Currency;
+  currency?: string;
   /** scope is usually the acting user's id, or 'system' / 'provider' for internal posts. */
   idempotency: { scope: string; key: string };
   entries: readonly EntryInput[];

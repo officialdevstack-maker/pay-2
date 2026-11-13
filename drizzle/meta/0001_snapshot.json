@@ -1,5 +1,5 @@
 {
-  "id": "3da09da5-98f4-471e-8c74-8c9457c5c929",
+  "id": "b7de62a8-ba04-489f-9dd8-eef00d345a3a",
   "prevId": "59230d88-f596-48bc-a6a9-106975c3524a",
   "version": "7",
   "dialect": "postgresql",
@@ -10,19 +10,19 @@
       "columns": {
         "scope": {
           "name": "scope",
-          "type": "varchar(128)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "idempotency_key": {
-          "name": "idempotency_key",
-          "type": "varchar(200)",
+        "key": {
+          "name": "key",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "request_hash": {
           "name": "request_hash",
-          "type": "varchar(64)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -57,27 +57,27 @@
         }
       },
       "compositePrimaryKeys": {
-        "idempotency_keys_scope_idempotency_key_pk": {
-          "name": "idempotency_keys_scope_idempotency_key_pk",
+        "idempotency_keys_scope_key_pk": {
+          "name": "idempotency_keys_scope_key_pk",
           "columns": [
             "scope",
-            "idempotency_key"
+            "key"
           ]
         }
       },
-      "uniqueConstraints": {
-        "idempotency_keys_transaction_unique": {
-          "name": "idempotency_keys_transaction_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "transaction_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "idempotency_keys_request_hash_check": {
-          "name": "idempotency_keys_request_hash_check",
+        "idempotency_scope_chk": {
+          "name": "idempotency_scope_chk",
+          "value": "length(trim(\"idempotency_keys\".\"scope\")) between 1 and 128"
+        },
+        "idempotency_key_chk": {
+          "name": "idempotency_key_chk",
+          "value": "length(trim(\"idempotency_keys\".\"key\")) between 1 and 200"
+        },
+        "idempotency_hash_chk": {
+          "name": "idempotency_hash_chk",
           "value": "\"idempotency_keys\".\"request_hash\" ~ '^[a-f0-9]{64}$'"
         }
       },
@@ -94,23 +94,51 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "wallet_id": {
-          "name": "wallet_id",
-          "type": "uuid",
+        "kind": {
+          "name": "kind",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "system_code": {
-          "name": "system_code",
-          "type": "varchar(32)",
+        "code": {
+          "name": "code",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "currency": {
           "name": "currency",
-          "type": "varchar(3)",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NGN'"
+        },
+        "normal_side": {
+          "name": "normal_side",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "balance": {
+          "name": "balance",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "version": {
+          "name": "version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "allow_negative": {
+          "name": "allow_negative",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -120,63 +148,39 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "ledger_accounts_wallet_unique": {
-          "name": "ledger_accounts_wallet_unique",
-          "columns": [
-            {
-              "expression": "wallet_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"ledger_accounts\".\"wallet_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ledger_accounts_wallet_id_wallets_id_fk": {
-          "name": "ledger_accounts_wallet_id_wallets_id_fk",
-          "tableFrom": "ledger_accounts",
-          "tableTo": "wallets",
-          "columnsFrom": [
-            "wallet_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "ledger_accounts_system_currency_unique": {
-          "name": "ledger_accounts_system_currency_unique",
+        "ledger_accounts_code_unique": {
+          "name": "ledger_accounts_code_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "system_code",
-            "currency"
+            "code"
           ]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "ledger_accounts_owner_check": {
-          "name": "ledger_accounts_owner_check",
-          "value": "(\"ledger_accounts\".\"wallet_id\" is not null and \"ledger_accounts\".\"system_code\" is null) or (\"ledger_accounts\".\"wallet_id\" is null and \"ledger_accounts\".\"system_code\" is not null)"
+        "ledger_accounts_kind_chk": {
+          "name": "ledger_accounts_kind_chk",
+          "value": "\"ledger_accounts\".\"kind\" in ('wallet', 'system')"
         },
-        "ledger_accounts_currency_check": {
-          "name": "ledger_accounts_currency_check",
+        "ledger_accounts_side_chk": {
+          "name": "ledger_accounts_side_chk",
+          "value": "\"ledger_accounts\".\"normal_side\" in ('debit', 'credit')"
+        },
+        "ledger_accounts_currency_chk": {
+          "name": "ledger_accounts_currency_chk",
           "value": "\"ledger_accounts\".\"currency\" ~ '^[A-Z]{3}$'"
         },
-        "ledger_accounts_system_code_check": {
-          "name": "ledger_accounts_system_code_check",
-          "value": "\"ledger_accounts\".\"system_code\" is null or \"ledger_accounts\".\"system_code\" in ('provider_clearing', 'fees', 'suspense', 'settlement')"
+        "ledger_accounts_code_kind_chk": {
+          "name": "ledger_accounts_code_kind_chk",
+          "value": "(\"ledger_accounts\".\"kind\" = 'system' and \"ledger_accounts\".\"code\" is not null) or (\"ledger_accounts\".\"kind\" = 'wallet' and \"ledger_accounts\".\"code\" is null)"
+        },
+        "ledger_accounts_balance_chk": {
+          "name": "ledger_accounts_balance_chk",
+          "value": "\"ledger_accounts\".\"kind\" = 'system' or (not \"ledger_accounts\".\"allow_negative\" and \"ledger_accounts\".\"balance\" >= 0)"
         }
       },
       "isRLSEnabled": false
@@ -187,10 +191,20 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "bigint",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "identity": {
+            "type": "always",
+            "name": "ledger_entries_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
         },
         "transaction_id": {
           "name": "transaction_id",
@@ -206,7 +220,7 @@
         },
         "direction": {
           "name": "direction",
-          "type": "varchar(6)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -216,9 +230,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "currency": {
-          "name": "currency",
-          "type": "varchar(3)",
+        "balance_after": {
+          "name": "balance_after",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -231,11 +245,17 @@
         }
       },
       "indexes": {
-        "ledger_entries_transaction_idx": {
-          "name": "ledger_entries_transaction_idx",
+        "ledger_entries_account_idx": {
+          "name": "ledger_entries_account_idx",
           "columns": [
             {
-              "expression": "transaction_id",
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -246,17 +266,11 @@
           "method": "btree",
           "with": {}
         },
-        "ledger_entries_account_created_at_idx": {
-          "name": "ledger_entries_account_created_at_idx",
+        "ledger_entries_txn_idx": {
+          "name": "ledger_entries_txn_idx",
           "columns": [
             {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
+              "expression": "transaction_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -300,112 +314,15 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "ledger_entries_direction_check": {
-          "name": "ledger_entries_direction_check",
+        "ledger_entries_direction_chk": {
+          "name": "ledger_entries_direction_chk",
           "value": "\"ledger_entries\".\"direction\" in ('debit', 'credit')"
         },
-        "ledger_entries_amount_positive_check": {
-          "name": "ledger_entries_amount_positive_check",
+        "ledger_entries_amount_chk": {
+          "name": "ledger_entries_amount_chk",
           "value": "\"ledger_entries\".\"amount\" > 0"
-        },
-        "ledger_entries_currency_check": {
-          "name": "ledger_entries_currency_check",
-          "value": "\"ledger_entries\".\"currency\" ~ '^[A-Z]{3}$'"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.transactions": {
-      "name": "transactions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "reference": {
-          "name": "reference",
-          "type": "varchar(40)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reversal_of": {
-          "name": "reversal_of",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "transactions_reversal_of_unique": {
-          "name": "transactions_reversal_of_unique",
-          "columns": [
-            {
-              "expression": "reversal_of",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"transactions\".\"reversal_of\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "transactions_created_at_idx": {
-          "name": "transactions_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "transactions_reversal_of_fk": {
-          "name": "transactions_reversal_of_fk",
-          "tableFrom": "transactions",
-          "tableTo": "transactions",
-          "columnsFrom": [
-            "reversal_of"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "transactions_reference_unique": {
-          "name": "transactions_reference_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "reference"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.pay_users": {
@@ -449,6 +366,115 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reverses_transaction_id": {
+          "name": "reverses_transaction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "transactions_reverses_uq": {
+          "name": "transactions_reverses_uq",
+          "columns": [
+            {
+              "expression": "reverses_transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transactions_reverses_transaction_id_transactions_id_fk": {
+          "name": "transactions_reverses_transaction_id_transactions_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "reverses_transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "transactions_reference_unique": {
+          "name": "transactions_reference_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "reference"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "transactions_reference_chk": {
+          "name": "transactions_reference_chk",
+          "value": "\"transactions\".\"reference\" ~ '^SPY_[A-Z0-9]{16}$'"
+        },
+        "transactions_type_chk": {
+          "name": "transactions_type_chk",
+          "value": "length(trim(\"transactions\".\"type\")) > 0"
+        },
+        "transactions_currency_chk": {
+          "name": "transactions_currency_chk",
+          "value": "\"transactions\".\"currency\" ~ '^[A-Z]{3}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.wallets": {
       "name": "wallets",
       "schema": "",
@@ -460,37 +486,31 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "owner_user_id": {
-          "name": "owner_user_id",
+        "user_id": {
+          "name": "user_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
         "product": {
           "name": "product",
-          "type": "varchar(16)",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pay'"
+        },
+        "ledger_account_id": {
+          "name": "ledger_account_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "currency": {
-          "name": "currency",
-          "type": "varchar(3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "balance": {
-          "name": "balance",
-          "type": "bigint",
+        "status": {
+          "name": "status",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "0"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
+          "default": "'active'"
         },
         "created_at": {
           "name": "created_at",
@@ -500,14 +520,49 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "wallets_user_product_uq": {
+          "name": "wallets_user_product_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "product",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "wallets_owner_user_id_pay_users_id_fk": {
-          "name": "wallets_owner_user_id_pay_users_id_fk",
+        "wallets_user_id_pay_users_id_fk": {
+          "name": "wallets_user_id_pay_users_id_fk",
           "tableFrom": "wallets",
           "tableTo": "pay_users",
           "columnsFrom": [
-            "owner_user_id"
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "wallets_ledger_account_id_ledger_accounts_id_fk": {
+          "name": "wallets_ledger_account_id_ledger_accounts_id_fk",
+          "tableFrom": "wallets",
+          "tableTo": "ledger_accounts",
+          "columnsFrom": [
+            "ledger_account_id"
           ],
           "columnsTo": [
             "id"
@@ -518,33 +573,19 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "wallets_owner_product_currency_unique": {
-          "name": "wallets_owner_product_currency_unique",
+        "wallets_ledger_account_id_unique": {
+          "name": "wallets_ledger_account_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "owner_user_id",
-            "product",
-            "currency"
+            "ledger_account_id"
           ]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "wallets_product_check": {
-          "name": "wallets_product_check",
+        "wallets_product_chk": {
+          "name": "wallets_product_chk",
           "value": "\"wallets\".\"product\" in ('pay', 'wallet')"
-        },
-        "wallets_currency_check": {
-          "name": "wallets_currency_check",
-          "value": "\"wallets\".\"currency\" ~ '^[A-Z]{3}$'"
-        },
-        "wallets_balance_nonnegative_check": {
-          "name": "wallets_balance_nonnegative_check",
-          "value": "\"wallets\".\"balance\" >= 0"
-        },
-        "wallets_version_nonnegative_check": {
-          "name": "wallets_version_nonnegative_check",
-          "value": "\"wallets\".\"version\" >= 0"
         }
       },
       "isRLSEnabled": false

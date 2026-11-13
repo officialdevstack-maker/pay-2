@@ -1,6 +1,7 @@
 import 'server-only';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
+import { ledgerAccounts, ledgerEntries } from '@/server/db/schema';
 
 export interface InvariantReport {
   ok: boolean;
@@ -12,26 +13,40 @@ export interface InvariantReport {
 
 /** Run from tests now, and from the ledger-balance alarm job in Phase 13. */
 export async function checkInvariants(): Promise<InvariantReport> {
-  const totals = await db.execute(sql`
-    select
-      coalesce(sum(amount) filter (where direction = 'debit'), 0)::text as debits,
-      coalesce(sum(amount) filter (where direction = 'credit'), 0)::text as credits
-    from ledger_entries`);
-  const drift = await db.execute(sql`
-    select a.id::text as id, a.balance::text as cached,
-           coalesce(sum(case when e.direction = a.normal_side then e.amount else -e.amount end), 0)::text as derived
-    from ledger_accounts a
-    left join ledger_entries e on e.account_id = a.id
-    group by a.id, a.balance, a.normal_side
-    having a.balance <> coalesce(sum(case when e.direction = a.normal_side then e.amount else -e.amount end), 0)`);
+  const [totals] = await db
+    .select({
+      debits: sql<bigint>`coalesce(sum(${ledgerEntries.amount}) filter (where ${ledgerEntries.direction} = 'debit'), 0)`.mapWith(
+        BigInt,
+      ),
+      credits: sql<bigint>`coalesce(sum(${ledgerEntries.amount}) filter (where ${ledgerEntries.direction} = 'credit'), 0)`.mapWith(
+        BigInt,
+      ),
+    })
+    .from(ledgerEntries);
 
-  const t = totals.rows[0] as { debits: string; credits: string };
-  const mismatches = (drift.rows as { id: string; cached: string; derived: string }[]).map((r) => ({
-    accountId: r.id,
-    cached: BigInt(r.cached),
-    derived: BigInt(r.derived),
+  const derivedBalance = sql<bigint>`
+    coalesce(
+      sum(case when ${ledgerEntries.direction} = ${ledgerAccounts.normalSide}
+        then ${ledgerEntries.amount} else -${ledgerEntries.amount} end),
+      0
+    )`.mapWith(BigInt);
+  const drift = await db
+    .select({
+      accountId: ledgerAccounts.id,
+      cached: ledgerAccounts.balance,
+      derived: derivedBalance,
+    })
+    .from(ledgerAccounts)
+    .leftJoin(ledgerEntries, eq(ledgerEntries.accountId, ledgerAccounts.id))
+    .groupBy(ledgerAccounts.id, ledgerAccounts.balance, ledgerAccounts.normalSide)
+    .having(sql`${ledgerAccounts.balance} <> ${derivedBalance}`);
+
+  const debits = totals?.debits ?? 0n;
+  const credits = totals?.credits ?? 0n;
+  const mismatches = drift.map(({ accountId, cached, derived }) => ({
+    accountId,
+    cached,
+    derived,
   }));
-  const debits = BigInt(t.debits);
-  const credits = BigInt(t.credits);
   return { ok: debits === credits && mismatches.length === 0, debits, credits, mismatches };
 }
