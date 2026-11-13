@@ -1,7 +1,7 @@
 import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, gt, lt, sql } from 'drizzle-orm';
-import type { IdTokenClaims, TokenSet } from '@officialdevstack-maker/auth';
+import type { IdTokenClaims, TokenSet } from '@spurs/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
@@ -31,8 +31,6 @@ type AuthContext = {
   stepUp: boolean;
 };
 
-type AuthTimeClaim = IdTokenClaims & { auth_time?: unknown };
-
 export interface CurrentUser {
   id: string;
   sessionId: string;
@@ -57,8 +55,7 @@ export function cookieOptions() {
 }
 
 function authTimeOf(claims: IdTokenClaims): number {
-  const value = (claims as AuthTimeClaim).auth_time;
-  return typeof value === 'number' ? value : Math.floor(Date.now() / 1000);
+  return typeof claims.auth_time === 'number' ? claims.auth_time : Math.floor(Date.now() / 1000);
 }
 
 function asUser(claims: IdTokenClaims): StoredUser {

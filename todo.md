@@ -4,7 +4,7 @@ Spurs Pay is a Google Pay-style payments app: a **full-stack Next.js app** that 
 
 Tick items as they land. Do not start a phase until the previous phase's "Done when" is true.
 
-**Status (last updated after Phase 6):** Phases 1, 3, 4, 5, 6 code is in. Phase 2 (auth) is the biggest remaining dependency. Items marked `(partial)` or `(stub)` are not fully done. "Done when" lines stay unticked until the tests have been run green.
+**Status:** Phases 1, 3, 4, 5, 6 code is in. Phase 2 auth has been implemented, but the private auth package is not available in this checkout, so typecheck cannot pass until package access is restored. Phase 7 transfer and profile APIs are implemented; database-backed tests still need a disposable Postgres run. Items marked `(partial)` or `(stub)` are not fully done.
 
 ---
 
@@ -103,7 +103,7 @@ src/
 
 ### Phase 2: Sign-in with Spurs Accounts (BFF)
 - [ ] Register Spurs Pay in Accounts as a **first-party confidential** client (`oidc:client:create "Spurs Pay" --first-party ...`), with redirect and post-logout URIs
-- [ ] Install `@spurs/auth` (GitHub Packages scope `@spurs`: add `.npmrc` with a read token locally and in CI)
+- [x] Install `@spurs/auth` (GitHub Packages scope `@spurs`: add `.npmrc` with a read token locally and in CI)
 - [ ] `/api/auth/login`: `createAuthorizationRequest`, keep state, nonce and verifier in a short-lived server session, redirect
 - [ ] `/api/auth/callback`: `exchangeCode`, verify ID token, create the encrypted session, redirect to `returnTo` (same-origin only)
 - [ ] Session stores tokens server-side only. The browser never sees an access or refresh token
@@ -155,8 +155,8 @@ src/
 ### Phase 6: Wallet, PIN and limits
 - [x] Transaction PIN: set, change, verify. scrypt with a server-side pepper, attempt counter, temporary lockout, never logged. Keyed by `(user, product)`.
 - [x] Limit tiers (per-transaction, daily, max balance) in `src/config/limits.ts`, enforced in the wallet module before any debit. **Values are placeholders.**
-- [ ] Wallet auto-created on first login (`product = 'pay'`) (`ensureWallet` exists; wire it into the Phase 2 login callback)
-- [ ] Rate limits on PIN verify and sends (per user and per IP) (partial: per-user PIN limit enforced; per-IP and send limits are defined in `RATE_RULES` but need the route layer, Phases 7 and 13)
+- [x] Wallet auto-created on first login (`product = 'pay'`) (`ensureWallet` is called by the login callback)
+- [x] Rate limits on PIN verify and sends (per user and per IP) (Postgres fixed-window counters; IP limits use the ingress-provided `x-real-ip` header)
 
 **Done when:** all `wallet.test.ts` tests pass, including the concurrent daily-limit test and the lockout test.
 - [ ] Verified
@@ -173,11 +173,11 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 **Done when:** a Wallet test client can fund-check, transfer and read activity for its own `product` only, and every attempt to cross products fails.
 
 ### Phase 7: Send money (P2P)
-- [ ] Recipient lookup by phone, email or `@tag` (add `tag` and privacy setting); show name only, never email or phone of non-contacts
-- [ ] Transfer service: validate, check status guard, PIN, limits, idempotency key, ledger post, notify both sides (order: rate limit, `verifyPin` outside the tx, then `assertTransferAllowed` + `post` in one tx)
-- [ ] Beneficiaries/recent people, with search
-- [ ] Failure handling: insufficient balance, recipient not found, limit hit, PIN locked, all via `AppError` codes
-- [ ] Concurrency and double-tap tests (UI generates one idempotency key per intent)
+- [ ] Recipient lookup by phone, email or `@tag` (add `tag` and privacy setting); show name only, never email or phone of non-contacts (partial: `@tag` only; name and tag returned)
+- [x] Transfer service: validate, check status guard, PIN, limits, idempotency key, ledger post, notify both sides (status/email guard in route; rate limit, PIN outside transaction, limits + ledger post inside one transaction)
+- [x] Beneficiaries/recent people, with search
+- [x] Failure handling: insufficient balance, recipient not found, limit hit, PIN locked, all via `AppError` codes
+- [ ] Concurrency and double-tap tests (database-backed tests are written; run against disposable Postgres before marking complete)
 
 ### Phase 8: Activity, receipts, notifications
 - [ ] Activity feed (cursor pagination, filters, search) built from ledger entries

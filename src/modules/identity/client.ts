@@ -1,5 +1,5 @@
 import 'server-only';
-import { SpursAuth } from '@officialdevstack-maker/auth';
+import { SpursAuth } from '@spurs/auth';
 import { env } from '@/env';
 
 export function authClient() {

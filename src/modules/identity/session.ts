@@ -1,6 +1,6 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
-import type { TokenSet } from '@officialdevstack-maker/auth';
+import type { TokenSet } from '@spurs/auth';
 import { AUTH } from '@/config/auth';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
