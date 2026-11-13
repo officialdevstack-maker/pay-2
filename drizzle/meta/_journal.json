@@ -8,6 +8,20 @@
       "when": 1794521572797,
       "tag": "0000_vengeful_gunslinger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794549626584,
+      "tag": "0001_cute_nitro",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794549891256,
+      "tag": "0002_gray_spacker_dave",
+      "breakpoints": true
     }
   ]
 }

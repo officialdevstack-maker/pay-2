@@ -30,3 +30,5 @@ npm run check:leaks
 ```
 
 The build requires the environment variables documented in `.env.example`.
+PostgreSQL-backed ledger tests run only when `LEDGER_TEST_DATABASE_URL` is set to the
+same disposable test database as `DATABASE_URL`; CI provisions and migrates this database.

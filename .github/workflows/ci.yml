@@ -40,9 +40,13 @@ jobs:
       - run: npm run check:leaks:source
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
       - name: Migrations apply to a clean database
         run: npm run db:migrate
+      - name: Unit and PostgreSQL integration tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          LEDGER_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/spurs_pay
       - run: npm run build
       - name: Provider names must not reach the browser
         run: npm run check:leaks

@@ -1,11 +1,8 @@
 import 'server-only';
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from 'ws';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import { env } from '@/env';
 import * as schema from './schema';
-
-if (typeof WebSocket === 'undefined') neonConfig.webSocketConstructor = ws;
 
 const globalForDb = globalThis as unknown as { __pool?: Pool };
 
