@@ -1,28 +1,26 @@
 import 'server-only';
-import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, gt, lt } from 'drizzle-orm';
-import { SpursAuth, SpursAuthError } from '@officialdevstack-maker/auth';
 import type { IdTokenClaims, TokenSet } from '@officialdevstack-maker/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
+import { AUTH } from '@/config/auth';
 import { env } from '@/env';
+import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import { ensureWallet } from '@/modules/wallet';
 import { db } from '@/server/db/client';
 import { authSessions, oidcAuthRequests, payUsers } from '@/server/db/schema';
-import { ensureWallet } from '@/modules/wallet';
-import { AppError } from '@/lib/errors';
+import { authClient } from './client';
+import { safeReturnTo } from './return-to';
+import { decrypt, encrypt } from './seal';
+import { resolveSession, SESSION_ID, sessionExpiry, type SessionRow } from './session';
+import { assertNotSuspended } from './status';
 
 export const SESSION_COOKIE = 'spurs_pay_session';
-const AUTH_REQUEST_TTL_MS = 10 * 60 * 1000;
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const TOKEN_REFRESH_SKEW_SECONDS = 60;
 
-type User = {
-  sub: string;
-  name?: string;
-  username?: string;
-  email?: string;
-  email_verified?: boolean;
-};
+type StoredUser = SessionRow['user'];
 
 type AuthContext = {
   state: string;
@@ -30,71 +28,44 @@ type AuthContext = {
   codeVerifier: string;
   redirectUri: string;
   returnTo: string;
+  stepUp: boolean;
 };
 
-function authClient() {
-  return new SpursAuth({
-    issuer: env.ACCOUNTS_ISSUER,
-    clientId: env.ACCOUNTS_CLIENT_ID,
-    clientSecret: env.ACCOUNTS_CLIENT_SECRET,
-    redirectUri: new URL('/auth/callback', env.APP_URL).toString(),
-    postLogoutRedirectUri: new URL('/signed-out', env.APP_URL).toString(),
-    scope: 'openid profile email offline_access',
-    storage: 'memory',
-  });
+type AuthTimeClaim = IdTokenClaims & { auth_time?: unknown };
+
+export interface CurrentUser {
+  id: string;
+  sessionId: string;
+  sub: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  emailVerified: boolean;
+  authTime: Date;
 }
 
-function encryptionKey(): Buffer {
-  return scryptSync(env.SESSION_SECRET, 'spurs-pay-auth-v1', 32);
-}
+const stateHash = (state: string) => createHash('sha256').update(state).digest('hex');
 
-function encrypt(value: unknown): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
-  return [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString('base64url')).join('.');
-}
-
-function decrypt<T>(value: string): T {
-  const [encodedIv, encodedTag, encodedCiphertext, extra] = value.split('.');
-  if (!encodedIv || !encodedTag || !encodedCiphertext || extra !== undefined) {
-    throw new AppError('INTERNAL', 'Stored sign-in data is invalid.');
-  }
-  const decipher = createDecipheriv('aes-256-gcm', encryptionKey(), Buffer.from(encodedIv, 'base64url'));
-  decipher.setAuthTag(Buffer.from(encodedTag, 'base64url'));
-  const plaintext = Buffer.concat([
-    decipher.update(Buffer.from(encodedCiphertext, 'base64url')),
-    decipher.final(),
-  ]);
-  return JSON.parse(plaintext.toString('utf8')) as T;
-}
-
-function stateHash(state: string): string {
-  return createHash('sha256').update(state).digest('hex');
-}
-
-function safeReturnTo(value: string | null): string {
-  if (!value) return '/';
-  const destination = new URL(value, env.APP_URL);
-  const appOrigin = new URL(env.APP_URL).origin;
-  if (destination.origin !== appOrigin) return '/';
-  return `${destination.pathname}${destination.search}${destination.hash}`;
-}
-
-function sessionCookieOptions() {
+export function cookieOptions() {
   return {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
-    maxAge: SESSION_TTL_SECONDS,
+    maxAge: AUTH.sessionTtlSeconds,
   };
 }
 
-function asUser(claims: IdTokenClaims): User {
+function authTimeOf(claims: IdTokenClaims): number {
+  const value = (claims as AuthTimeClaim).auth_time;
+  return typeof value === 'number' ? value : Math.floor(Date.now() / 1000);
+}
+
+function asUser(claims: IdTokenClaims): StoredUser {
   if (!claims.sub) throw new AppError('UNAUTHENTICATED', 'Sign-in did not return a valid user.', 401);
   return {
     sub: claims.sub,
+    auth_time: authTimeOf(claims),
     ...(typeof claims.name === 'string' && { name: claims.name }),
     ...(typeof claims.preferred_username === 'string' && { username: claims.preferred_username }),
     ...(typeof claims.email === 'string' && { email: claims.email }),
@@ -102,11 +73,16 @@ function asUser(claims: IdTokenClaims): User {
   };
 }
 
-export async function beginSignIn(returnTo: string | null): Promise<string> {
-  const client = authClient();
-  const request = await client.createAuthorizationRequest();
+export async function beginSignIn(
+  returnTo: string | null,
+  options: { stepUp?: boolean } = {},
+): Promise<string> {
+  const stepUp = Boolean(options.stepUp);
+  const request = await authClient().createAuthorizationRequest();
   const now = new Date();
+
   await db.delete(oidcAuthRequests).where(lt(oidcAuthRequests.expiresAt, now));
+  await db.delete(authSessions).where(lt(authSessions.expiresAt, now));
   await db.insert(oidcAuthRequests).values({
     stateHash: stateHash(request.state),
     encryptedContext: encrypt({
@@ -115,10 +91,17 @@ export async function beginSignIn(returnTo: string | null): Promise<string> {
       codeVerifier: request.codeVerifier,
       redirectUri: request.redirectUri,
       returnTo: safeReturnTo(returnTo),
+      stepUp,
     } satisfies AuthContext),
-    expiresAt: new Date(now.getTime() + AUTH_REQUEST_TTL_MS),
+    expiresAt: new Date(now.getTime() + AUTH.authRequestTtlSeconds * 1000),
   });
-  return request.url;
+
+  const url = new URL(request.url);
+  if (stepUp) {
+    url.searchParams.set('prompt', 'login');
+    url.searchParams.set('max_age', String(AUTH.stepUpMaxAgeSeconds));
+  }
+  return url.toString();
 }
 
 export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: string; returnTo: string }> {
@@ -131,11 +114,19 @@ export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: st
     .where(and(eq(oidcAuthRequests.stateHash, stateHash(state)), gt(oidcAuthRequests.expiresAt, new Date())))
     .returning({ encryptedContext: oidcAuthRequests.encryptedContext });
   if (!pending) throw new AppError('UNAUTHENTICATED', 'This sign-in request expired. Please try again.', 401);
+  if (callback.searchParams.has('error')) {
+    throw new AppError('UNAUTHENTICATED', 'Sign-in was not completed.', 401);
+  }
 
   const context = decrypt<AuthContext>(pending.encryptedContext);
   const tokens = await authClient().exchangeCode(callback, context);
   if (!tokens.claims) throw new AppError('UNAUTHENTICATED', 'Sign-in did not return a verified identity.', 401);
   const user = asUser(tokens.claims);
+
+  const authAge = Date.now() / 1000 - (user.auth_time ?? 0);
+  if (context.stepUp && (authAge < -30 || authAge > AUTH.stepUpMaxAgeSeconds + 30)) {
+    throw new AppError('UNAUTHENTICATED', 'Please confirm your sign-in again.', 401);
+  }
 
   const [created] = await db
     .insert(payUsers)
@@ -154,87 +145,89 @@ export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: st
     userId: payUser.id,
     user,
     encryptedTokens: encrypt(tokens),
-    expiresAt: new Date((tokens.refreshToken ? Date.now() / 1000 + SESSION_TTL_SECONDS : tokens.expiresAt) * 1000),
+    expiresAt: sessionExpiry(tokens),
   });
+
+  const previous = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (previous && SESSION_ID.test(previous)) {
+    await db.delete(authSessions).where(eq(authSessions.id, previous));
+  }
+
   return { sessionId, returnTo: context.returnTo };
 }
 
-async function loadAndRefreshSession(sessionId: string): Promise<User | null> {
-  return db.transaction(async (tx) => {
-    const [session] = await tx
-      .select()
-      .from(authSessions)
-      .where(eq(authSessions.id, sessionId))
-      .for('update')
-      .limit(1);
-    if (!session || session.expiresAt <= new Date()) {
-      if (session) await tx.delete(authSessions).where(eq(authSessions.id, sessionId));
-      return null;
-    }
+export const getUser = cache(async (): Promise<CurrentUser | null> => {
+  const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!sessionId || !SESSION_ID.test(sessionId)) return null;
 
-    const tokens = decrypt<TokenSet>(session.encryptedTokens);
-    if (tokens.expiresAt > Date.now() / 1000 + TOKEN_REFRESH_SKEW_SECONDS) return session.user;
-    if (!tokens.refreshToken) {
-      await tx.delete(authSessions).where(eq(authSessions.id, sessionId));
-      return null;
-    }
+  const session = await resolveSession(sessionId);
+  if (!session) return null;
 
-    let refreshed: TokenSet;
-    try {
-      refreshed = await authClient().refresh(tokens.refreshToken);
-    } catch (error) {
-      if (error instanceof SpursAuthError && error.code === 'invalid_grant') {
-        await tx.delete(authSessions).where(eq(authSessions.id, sessionId));
-        return null;
-      }
-      throw error;
-    }
+  const { user } = session;
+  return {
+    id: session.userId,
+    sessionId: session.id,
+    sub: user.sub,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    emailVerified: user.email_verified === true,
+    authTime: new Date((user.auth_time ?? session.createdAt.getTime() / 1000) * 1000),
+  };
+});
 
-    await tx
-      .update(authSessions)
-      .set({
-        encryptedTokens: encrypt(refreshed),
-        expiresAt: new Date((refreshed.refreshToken ? Date.now() / 1000 + SESSION_TTL_SECONDS : refreshed.expiresAt) * 1000),
-      })
-      .where(eq(authSessions.id, sessionId));
-    return session.user;
-  });
-}
-
-export async function getUser(): Promise<User | null> {
-  const jar = await cookies();
-  const sessionId = jar.get(SESSION_COOKIE)?.value;
-  if (!sessionId || !/^[a-f0-9]{64}$/.test(sessionId)) return null;
-  return loadAndRefreshSession(sessionId);
-}
-
-export async function requireUser(): Promise<User> {
+export async function requireUser(): Promise<CurrentUser> {
   const user = await getUser();
   if (!user) redirect(new URL('/auth/login', env.APP_URL).toString());
   return user;
 }
 
-export async function signOut(sessionId: string | undefined): Promise<string> {
-  if (!sessionId || !/^[a-f0-9]{64}$/.test(sessionId)) {
-    return new URL('/signed-out', env.APP_URL).toString();
-  }
-
-  const [session] = await db.select().from(authSessions).where(eq(authSessions.id, sessionId)).limit(1);
-  await db.delete(authSessions).where(eq(authSessions.id, sessionId));
-  if (!session) return new URL('/signed-out', env.APP_URL).toString();
-
-  const tokens = decrypt<TokenSet>(session.encryptedTokens);
-  const client = authClient();
-  if (tokens.refreshToken) await client.revoke(tokens.refreshToken);
-  if (tokens.idToken) {
-    return client.endSessionUrl({
-      idTokenHint: tokens.idToken,
-      postLogoutRedirectUri: new URL('/signed-out', env.APP_URL).toString(),
-    });
-  }
-  return new URL('/signed-out', env.APP_URL).toString();
+export async function requireApiUser(): Promise<CurrentUser> {
+  const user = await getUser();
+  if (!user) throw new AppError('UNAUTHENTICATED', 'Sign in to continue.', 401);
+  return user;
 }
 
-export function cookieOptions() {
-  return sessionCookieOptions();
+export async function requireMoneyUser(): Promise<CurrentUser> {
+  const user = await requireApiUser();
+  if (!user.emailVerified) {
+    throw new AppError('EMAIL_NOT_VERIFIED', 'Verify your email to continue.', 403);
+  }
+  await assertNotSuspended(user.sub);
+  return user;
+}
+
+export function requireRecentAuth(
+  user: CurrentUser,
+  options: { maxAgeSeconds?: number; returnTo?: string } = {},
+): void {
+  const maxAge = options.maxAgeSeconds ?? AUTH.stepUpMaxAgeSeconds;
+  if (Date.now() - user.authTime.getTime() <= maxAge * 1000) return;
+
+  const params = new URLSearchParams({ stepUp: '1' });
+  if (options.returnTo) params.set('returnTo', options.returnTo);
+  throw new AppError('STEP_UP_REQUIRED', 'Confirm it is you to continue.', 403, {
+    loginUrl: `/auth/login?${params.toString()}`,
+  });
+}
+
+export async function signOut(): Promise<string> {
+  const signedOut = new URL('/signed-out', env.APP_URL).toString();
+  const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!sessionId || !SESSION_ID.test(sessionId)) return signedOut;
+
+  const [session] = await db.delete(authSessions).where(eq(authSessions.id, sessionId)).returning();
+  if (!session) return signedOut;
+
+  try {
+    const tokens = decrypt<TokenSet>(session.encryptedTokens);
+    const client = authClient();
+    if (tokens.refreshToken) await client.revoke(tokens.refreshToken);
+    if (tokens.idToken) {
+      return await client.endSessionUrl({ idTokenHint: tokens.idToken, postLogoutRedirectUri: signedOut });
+    }
+  } catch (error) {
+    logger.warn('sign-out cleanup failed', { error });
+  }
+  return signedOut;
 }

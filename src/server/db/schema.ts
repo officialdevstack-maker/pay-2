@@ -46,6 +46,7 @@ export const authSessions = pgTable(
         username?: string;
         email?: string;
         email_verified?: boolean;
+        auth_time?: number;
       }>()
       .notNull(),
     encryptedTokens: text('encrypted_tokens').notNull(),

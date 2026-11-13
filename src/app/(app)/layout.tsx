@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { requireUser } from '@/modules/identity';
 
@@ -18,11 +19,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <span className="text-lg font-bold tracking-tight">Spurs Pay</span>
         <div className="flex items-center gap-3">
           <span className="max-w-32 truncate text-sm text-muted">{user.name ?? user.email}</span>
-          <Link href="/auth/logout" className="text-sm font-semibold text-primary">
-            Sign out
-          </Link>
+          <form action="/auth/logout" method="post">
+            <Button type="submit" variant="ghost" className="h-10 px-3 text-sm text-primary">
+              Sign out
+            </Button>
+          </form>
         </div>
       </header>
+
+      {!user.emailVerified && (
+        <div role="status" className="mx-5 mb-2 rounded-control bg-primary-soft px-4 py-3 text-sm">
+          Verify your email to send money.
+        </div>
+      )}
 
       <main className="flex-1 px-5 pb-28">{children}</main>
 
