@@ -42,3 +42,23 @@ export function percentOf(kobo: Kobo, basisPoints: number): Kobo {
   }
   return (kobo * BigInt(basisPoints) + 5000n) / 10000n;
 }
+
+export function spokenNaira(
+  kobo: Kobo,
+  options: { sign?: 'in' | 'out' | 'none' } = {},
+): string {
+  const abs = kobo < 0n ? -kobo : kobo;
+  const whole = abs / 100n;
+  const frac = abs % 100n;
+  const grouped = new Intl.NumberFormat('en-NG').format(whole);
+
+  let words: string;
+  if (whole === 0n && frac === 0n) words = 'zero naira';
+  else if (whole === 0n) words = `${frac} kobo`;
+  else if (frac === 0n) words = `${grouped} naira`;
+  else words = `${grouped} naira ${frac} kobo`;
+
+  if (options.sign === 'in') return `plus ${words}`;
+  if (options.sign === 'out') return `minus ${words}`;
+  return words;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatNaira, parseNairaToKobo, percentOf } from './money';
+import { formatNaira, parseNairaToKobo, percentOf, spokenNaira } from './money';
 
 describe('money', () => {
   it('parses amounts without float maths', () => {
@@ -24,5 +24,14 @@ describe('money', () => {
   it('computes 2.5% fees, rounding half up', () => {
     expect(percentOf(100000n, 250)).toBe(2500n);
     expect(percentOf(10100n, 250)).toBe(253n);
+  });
+
+  it('speaks amounts for screen readers', () => {
+    expect(spokenNaira(125050n)).toBe('1,250 naira 50 kobo');
+    expect(spokenNaira(85000n)).toBe('850 naira');
+    expect(spokenNaira(300000n, { sign: 'in' })).toBe('plus 3,000 naira');
+    expect(spokenNaira(85000n, { sign: 'out' })).toBe('minus 850 naira');
+    expect(spokenNaira(0n)).toBe('zero naira');
+    expect(spokenNaira(50n)).toBe('50 kobo');
   });
 });

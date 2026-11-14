@@ -145,4 +145,4 @@ When you choose against a rule in this document, add a line here with the date, 
 
 | Date | Screen | Decision | Reason |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-11-14 | Foundations | Use 12 px control, 16 px card and 24 px sheet radii. | Match the design-system radius scale and distinguish controls, surfaces and floating layers. |
