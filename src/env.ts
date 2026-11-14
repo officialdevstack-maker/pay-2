@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { parseServiceClients } from '@/lib/service-clients';
 
 const schema = z
   .object({
@@ -11,6 +12,7 @@ const schema = z
     ACCOUNTS_ISSUER: z.url(),
     ACCOUNTS_CLIENT_ID: z.string().min(1),
     ACCOUNTS_CLIENT_SECRET: z.string().min(1),
+    SERVICE_CLIENTS: z.string().default(''),
     PAYMENTS_DRIVER: z.string().min(1).default('mock'),
     PAYMENTS_SECRET_KEY: z.string().default(''),
     PAYMENTS_PUBLIC_KEY: z.string().default(''),
@@ -40,6 +42,21 @@ const schema = z
         code: 'custom',
         path: ['PAYMENTS_DRIVER'],
         message: 'The mock driver is not allowed in production.',
+      });
+    }
+
+    const registry = parseServiceClients(value.SERVICE_CLIENTS);
+    if (!registry.ok) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SERVICE_CLIENTS'],
+        message: registry.message,
+      });
+    } else if (registry.clients.has(value.ACCOUNTS_CLIENT_ID)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SERVICE_CLIENTS'],
+        message: "SERVICE_CLIENTS must not include Pay's own client.",
       });
     }
 

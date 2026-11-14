@@ -4,7 +4,12 @@ const SESSION_COOKIE = 'spurs_pay_session';
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  if (path.startsWith('/auth/') || path === '/signed-out' || path.startsWith('/api/hooks/')) {
+  if (
+    path.startsWith('/auth/') ||
+    path === '/signed-out' ||
+    path.startsWith('/api/hooks/') ||
+    path.startsWith('/api/service/')
+  ) {
     return NextResponse.next();
   }
 

@@ -15,8 +15,8 @@ export async function enforceRate(action: Action, userId: string, ip?: string): 
   await Promise.all(limits);
 }
 
-export async function verifyTransactionPin(userId: string, pin: string): Promise<void> {
-  await verifyPin(userId, 'pay', pin);
+export async function verifyTransactionPin(userId: string, pin: string, product: Product = 'pay'): Promise<void> {
+  await verifyPin(userId, product, pin);
 }
 
 export async function assertCanSend(

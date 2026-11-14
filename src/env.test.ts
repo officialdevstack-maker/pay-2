@@ -10,6 +10,7 @@ const GOOD = {
   ACCOUNTS_CLIENT_ID: 'id',
   ACCOUNTS_CLIENT_SECRET: 'secret',
   PAYMENTS_DRIVER: 'mock',
+  SERVICE_CLIENTS: '',
 };
 
 function load(overrides: Record<string, string> = {}) {
@@ -50,5 +51,13 @@ describe('env', () => {
 
   it('requires credentials for a real driver', async () => {
     await expect(load({ PAYMENTS_DRIVER: 'placeholder' })).rejects.toThrow(/PAYMENTS_SECRET_KEY/);
+  });
+
+  it('refuses a service client that would act as pay', async () => {
+    await expect(load({ SERVICE_CLIENTS: 'spurs-wallet=pay' })).rejects.toThrow(/SERVICE_CLIENTS/);
+  });
+
+  it("refuses Pay's own client as a service client", async () => {
+    await expect(load({ SERVICE_CLIENTS: 'id=wallet' })).rejects.toThrow(/SERVICE_CLIENTS/);
   });
 });

@@ -18,6 +18,8 @@ import { decrypt, encrypt } from './seal';
 import { resolveSession, SESSION_ID, sessionExpiry, type SessionRow } from './session';
 import { assertNotSuspended } from './status';
 
+export { assertNotSuspended } from './status';
+
 export const SESSION_COOKIE = 'spurs_pay_session';
 
 type StoredUser = SessionRow['user'];

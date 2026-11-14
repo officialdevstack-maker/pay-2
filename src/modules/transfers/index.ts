@@ -1,4 +1,11 @@
-export { sendMoney } from './send';
+export { sendMoney, transferBetweenUsers } from './send';
 export { listRecentRecipients, lookupRecipient } from './recipients';
-export { parseSendRequest, serializeSend } from './input';
-export type { RecipientView, SendInput, SendResult, Sender } from './types';
+export { cleanNote, parseSendRequest, serializeSend } from './input';
+export type {
+  RecipientView,
+  SendInput,
+  SendResult,
+  Sender,
+  TransferCommand,
+  TransferOutcome,
+} from './types';

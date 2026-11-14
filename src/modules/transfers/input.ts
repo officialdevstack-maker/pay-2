@@ -15,7 +15,7 @@ const body = z.object({
 const invalid = (message: string, fields?: string[]) =>
   new AppError('VALIDATION_FAILED', message, 422, fields ? { fields } : undefined);
 
-function cleanNote(note: string | null | undefined): string | null {
+export function cleanNote(note: string | null | undefined): string | null {
   const cleaned = (note ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .replace(/\s+/g, ' ')
