@@ -19,6 +19,10 @@ const schema = z
     PAYMENTS_ENCRYPTION_KEY: z.string().default(''),
     PAYMENTS_WEBHOOK_HASH: z.string().default(''),
     PAYMENTS_WEBHOOK_TOKEN: z.string().default(''),
+    CONTACT_PEPPER: z.string().min(32, 'CONTACT_PEPPER must be at least 32 characters').optional(),
+    EMAIL_DRIVER: z.enum(['log', 'smtp']).default('log'),
+    SMTP_URL: z.string().default(''),
+    EMAIL_FROM: z.string().default(''),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === 'production' && !value.DATABASE_URL) {
@@ -35,6 +39,34 @@ const schema = z
         path: ['PIN_PEPPER'],
         message: 'PIN_PEPPER is required in production.',
       });
+    }
+
+    if (value.NODE_ENV === 'production' && !value.CONTACT_PEPPER) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CONTACT_PEPPER'],
+        message: 'CONTACT_PEPPER is required in production.',
+      });
+    }
+
+    if (value.NODE_ENV === 'production' && value.EMAIL_DRIVER === 'log') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['EMAIL_DRIVER'],
+        message: 'The log email driver is not allowed in production.',
+      });
+    }
+
+    if (value.EMAIL_DRIVER === 'smtp') {
+      for (const key of ['SMTP_URL', 'EMAIL_FROM'] as const) {
+        if (!value[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} is required for the smtp driver.`,
+          });
+        }
+      }
     }
 
     if (value.NODE_ENV === 'production' && value.PAYMENTS_DRIVER === 'mock') {

@@ -22,6 +22,11 @@ export const payUsers = pgTable(
     accountsSub: text('accounts_sub').notNull().unique(),
     tag: text('tag').unique(),
     displayName: text('display_name'),
+    email: text('email'),
+    emailHash: text('email_hash'),
+    phoneHash: text('phone_hash'),
+    discoverable: boolean('discoverable').notNull().default(false),
+    emailNotifications: boolean('email_notifications').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -29,6 +34,10 @@ export const payUsers = pgTable(
       'pay_users_tag_chk',
       sql`${t.tag} is null or (${t.tag} ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' and length(${t.tag}) between 3 and 20)`,
     ),
+    check('pay_users_email_hash_chk', sql`${t.emailHash} is null or ${t.emailHash} ~ '^[a-f0-9]{64}$'`),
+    check('pay_users_phone_hash_chk', sql`${t.phoneHash} is null or ${t.phoneHash} ~ '^[a-f0-9]{64}$'`),
+    index('pay_users_email_hash_idx').on(t.emailHash),
+    index('pay_users_phone_hash_idx').on(t.phoneHash),
   ],
 );
 
@@ -283,5 +292,8 @@ export const notifications = pgTable(
     readAt: timestamp('read_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('notifications_user_recent_idx').on(t.userId, t.createdAt)],
+  (t) => [
+    index('notifications_user_recent_idx').on(t.userId, t.createdAt),
+    index('notifications_user_unread_idx').on(t.userId).where(sql`${t.readAt} is null`),
+  ],
 );

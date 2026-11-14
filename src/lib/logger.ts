@@ -1,6 +1,6 @@
 import { env } from '@/env';
 
-const REDACT = /pass(word)?|pin|secret|token|authorization|cookie|card|cvv|account_?number|otp/i;
+const REDACT = /pass(word)?|pin|secret|token|authorization|cookie|card|cvv|account_?number|otp|email|phone/i;
 const MAX_DEPTH = 5;
 
 function redact(value: unknown, depth = 0): unknown {
