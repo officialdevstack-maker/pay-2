@@ -3,11 +3,14 @@ import { AppError } from '@/lib/errors';
 import { db } from '@/server/db/client';
 import { notifications } from '@/server/db/schema';
 
+export type NotificationEmailMode = 'if_enabled' | 'always';
+
 export interface NotificationInput {
   type: string;
   title: string;
   body: string;
   reference?: string;
+  email?: NotificationEmailMode;
 }
 
 export async function notify(userId: string, input: NotificationInput): Promise<void> {

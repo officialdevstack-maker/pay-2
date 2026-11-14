@@ -6,6 +6,8 @@ import { checkTag } from '@/lib/tag';
 import { db } from '@/server/db/client';
 import { payUsers } from '@/server/db/schema';
 
+export { contactHash, syncContacts } from './contacts';
+
 export async function setTag(userId: string, raw: string): Promise<string> {
   const checked = checkTag(raw);
   if (!checked.ok) throw new AppError('INVALID_TAG', checked.message, 422);

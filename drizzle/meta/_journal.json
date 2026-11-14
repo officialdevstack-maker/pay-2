@@ -43,6 +43,13 @@
       "when": 1794572037597,
       "tag": "0005_burly_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794639162697,
+      "tag": "0006_third_tarantula",
+      "breakpoints": true
     }
   ]
 }

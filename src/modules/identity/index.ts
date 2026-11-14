@@ -9,6 +9,7 @@ import { AUTH } from '@/config/auth';
 import { env } from '@/env';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { syncContacts } from '@/modules/profile/contacts';
 import { ensureWallet } from '@/modules/wallet';
 import { db } from '@/server/db/client';
 import { authSessions, oidcAuthRequests, payUsers } from '@/server/db/schema';
@@ -141,6 +142,7 @@ export async function finishSignIn(callbackUrl: string): Promise<{ sessionId: st
     })
     .returning({ id: payUsers.id });
   if (!payUser) throw new AppError('INTERNAL', 'Could not create the Pay account.');
+  await syncContacts(payUser.id, tokens.claims);
   await ensureWallet(payUser.id, 'pay');
 
   const sessionId = randomBytes(32).toString('hex');

@@ -1,5 +1,4 @@
-﻿const EMAIL = new RegExp('^[^\s@]{1,64}@[^
-\s@]{1,255}\.[^\s@]{2,}$');
+const EMAIL = new RegExp("^[^\\s@]{1,64}@[^\\s@]{1,255}\\.[^\\s@]{2,}$");
 
 export function normalizeEmail(input: string): string | null {
   const value = input.trim().toLowerCase();
