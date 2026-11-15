@@ -14,7 +14,7 @@ export function RecentActivity({ items }: { items: ActivityItem[] }) {
     <section aria-labelledby="activity-heading">
       <div className="mb-3 flex items-center justify-between">
         <h2 id="activity-heading" className="type-heading">
-          Recent activity
+          Recent payments
         </h2>
         <Link href="/activity" className="type-body-sm inline-flex h-11 items-center px-2 font-semibold text-primary">
           See all
@@ -22,9 +22,7 @@ export function RecentActivity({ items }: { items: ActivityItem[] }) {
       </div>
       {items.length === 0 ? (
         <Card>
-          <EmptyState icon={Clock} action={<Link href="/add-money">Add money</Link>}>
-            No activity yet. Add money to get started.
-          </EmptyState>
+          <EmptyState icon={Clock}>No payments yet.</EmptyState>
         </Card>
       ) : (
         <ListGroup>

@@ -4,7 +4,7 @@ import { ensureWallet } from '@/modules/wallet';
 import { db } from '@/server/db/client';
 import { ledgerEntries, payUsers, transactions } from '@/server/db/schema';
 
-export const ACTIVITY_FILTERS = ['all', 'sent', 'received', 'added'] as const;
+export const ACTIVITY_FILTERS = ['all', 'sent', 'received'] as const;
 export type ActivityFilter = (typeof ACTIVITY_FILTERS)[number];
 
 export const parseFilter = (value: string | undefined): ActivityFilter =>
@@ -147,8 +147,6 @@ function getFilterClause(filter: ActivityFilter) {
       return sql`${ledgerEntries.direction} = 'debit' and ${transactions.type} <> 'funding'`;
     case 'received':
       return sql`${ledgerEntries.direction} = 'credit' and ${transactions.type} <> 'funding'`;
-    case 'added':
-      return sql`${transactions.type} = 'funding'`;
     default:
       return sql`1 = 1`;
   }

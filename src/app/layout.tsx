@@ -4,7 +4,7 @@ import { Figtree } from 'next/font/google';
 
 export const metadata: Metadata = {
   title: { default: 'Spurs Pay', template: '%s · Spurs Pay' },
-  description: 'Send, receive and manage money with your Spurs account.',
+  description: 'Checkout and payment methods with your Spurs account.',
 };
 
 export const viewport: Viewport = {

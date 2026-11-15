@@ -1,5 +1,4 @@
 import { Clock } from 'lucide-react';
-import Link from 'next/link';
 import { AmountDisplay } from '@/components/ui/amount-display';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -19,8 +18,6 @@ function labelForFilter(filter: (typeof ACTIVITY_FILTERS)[number]) {
       return 'Sent';
     case 'received':
       return 'Received';
-    case 'added':
-      return 'Added money';
     default:
       return filter;
   }
@@ -34,7 +31,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: Pr
 
   return (
     <div className="space-y-5 pt-2">
-      <PageHeader title="Activity" description="Recent transfers and funding in your Spurs Pay wallet." />
+      <PageHeader title="Activity" description="Your recent payments." />
       <Segmented
         label="Activity filters"
         items={ACTIVITY_FILTERS.map((item) => ({
@@ -46,9 +43,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: Pr
 
       {items.length === 0 ? (
         <Card>
-          <EmptyState icon={Clock} action={<Link href="/add-money">Add money</Link>}>
-            No activity yet. Add money to get started.
-          </EmptyState>
+          <EmptyState icon={Clock}>No payments yet.</EmptyState>
         </Card>
       ) : (
         <ListGroup>

@@ -1,4 +1,4 @@
-export type NavIcon = 'home' | 'send' | 'clock' | 'settings';
+export type NavIcon = 'home' | 'clock' | 'settings';
 
 export interface NavItem {
   label: string;
@@ -11,8 +11,7 @@ export interface NavItem {
 }
 
 export const NAV: readonly NavItem[] = [
-  { label: 'Home', href: '/', icon: 'home', ready: true, also: ['/add-money'] },
-  { label: 'Pay', href: '/pay', icon: 'send', ready: false },
+  { label: 'Home', href: '/', icon: 'home', ready: true },
   { label: 'Activity', href: '/activity', icon: 'clock', ready: true },
   { label: 'Settings', href: '/settings', icon: 'settings', ready: true },
 ];

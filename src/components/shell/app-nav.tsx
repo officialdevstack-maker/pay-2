@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, House, Send, Settings, type LucideIcon } from 'lucide-react';
+import { Clock, House, Settings, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BUILT_NAV, isNavActive, type NavIcon } from '@/config/nav';
@@ -8,7 +8,6 @@ import { cn } from '@/lib/cn';
 
 export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   home: House,
-  send: Send,
   clock: Clock,
   settings: Settings,
 };

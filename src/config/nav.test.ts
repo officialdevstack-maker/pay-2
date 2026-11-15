@@ -4,9 +4,8 @@ import { isNavActive, NAV } from './nav';
 const item = (label: string) => NAV.find((entry) => entry.label === label)!;
 
 describe('isNavActive', () => {
-  it('matches Home only on / and on Add money', () => {
+  it('matches Home only on /', () => {
     expect(isNavActive('/', item('Home'))).toBe(true);
-    expect(isNavActive('/add-money', item('Home'))).toBe(true);
     expect(isNavActive('/activity', item('Home'))).toBe(false);
   });
 

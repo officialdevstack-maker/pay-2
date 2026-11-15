@@ -1,4 +1,4 @@
-import { LockKeyhole, ShieldCheck, UserRound } from 'lucide-react';
+import { ShieldCheck, UserRound } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,7 +27,6 @@ export default async function SettingsPage() {
 
       <ListGroup>
         <ListRow leading={<UserRound aria-hidden="true" size={18} className="text-muted" />} title="Profile" subtitle="Name, email and account details" href="/settings/profile" />
-        <ListRow leading={<LockKeyhole aria-hidden="true" size={18} className="text-muted" />} title="PIN" subtitle="Set or change your transaction PIN" href="/settings/pin" />
         <ListRow leading={<ShieldCheck aria-hidden="true" size={18} className="text-muted" />} title="Security" subtitle="Sign in and device checks" href="/settings/security" />
       </ListGroup>
 
