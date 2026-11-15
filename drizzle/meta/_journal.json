@@ -64,6 +64,13 @@
       "when": 1794776212771,
       "tag": "0008_slow_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794778506478,
+      "tag": "0009_curious_randall",
+      "breakpoints": true
     }
   ]
 }

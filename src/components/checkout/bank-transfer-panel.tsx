@@ -2,7 +2,7 @@
 
 import { Landmark } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AmountDisplay } from '@/components/ui/amount-display';
 import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
@@ -31,39 +31,53 @@ export function BankTransferPanel({
   const router = useRouter();
   const [details, setDetails] = useState<Details | null>(initial);
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const idempotencyKey = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!details) return;
+    if (!details && !waiting) return;
     const timer = window.setInterval(async () => {
       try {
         const response = await fetch(`/api/checkout/${sessionId}/status`, { cache: 'no-store' });
         if (!response.ok) return;
-        const data = (await response.json()) as { status?: string };
+        const data = (await response.json()) as { status?: string; attemptStatus?: string | null };
         if (data.status && data.status !== 'open') router.refresh();
+        if (waiting && !data.attemptStatus) {
+          setWaiting(false);
+          idempotencyKey.current = null;
+        }
       } catch {
         // offline or timeout: keep waiting, never claim a result
       }
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [details, sessionId, router]);
+  }, [details, waiting, sessionId, router]);
 
   async function start() {
-    if (busy) return;
+    if (busy || waiting) return;
     setBusy(true);
     setError(null);
+    const key = (idempotencyKey.current ??= crypto.randomUUID());
     try {
-      const response = await fetch(`/api/checkout/${sessionId}/bank-transfer`, { method: 'POST' });
+      const response = await fetch(`/api/checkout/${sessionId}/bank-transfer`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': key },
+      });
       const data = (await response.json().catch(() => null)) as {
         transfer?: Details;
         error?: { message?: string };
       } | null;
       if (!response.ok || !data?.transfer) {
+        if (response.status === 422) idempotencyKey.current = null;
+        if (response.status === 409 || response.status >= 500) setWaiting(true);
         setError(data?.error?.message ?? 'Something went wrong on our side. Try again.');
         return;
       }
       setDetails(data.transfer);
+      setWaiting(false);
     } catch {
+      setWaiting(true);
       setError('You appear to be offline.');
     } finally {
       setBusy(false);
@@ -77,10 +91,16 @@ export function BankTransferPanel({
           Choose a payment method
         </h2>
         {error ? <Banner tone="danger">{error}</Banner> : null}
-        <Button size="lg" className="w-full" loading={busy} onClick={start}>
-          Pay by bank transfer
-        </Button>
-        <p className="type-body-sm text-muted">You are not charged until your transfer arrives.</p>
+        {waiting ? (
+          <Banner tone="info">We are checking this payment. Do not start another payment while it is being confirmed.</Banner>
+        ) : (
+          <>
+            <Button size="lg" className="w-full" loading={busy} onClick={start}>
+              Pay by bank transfer
+            </Button>
+            <p className="type-body-sm text-muted">You are not charged until your transfer arrives.</p>
+          </>
+        )}
       </section>
     );
   }

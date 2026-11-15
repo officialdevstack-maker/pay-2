@@ -5,6 +5,7 @@ import { post, systemAccountId } from '@/modules/ledger';
 import type { Tx } from '@/server/db/client';
 import { checkoutSessions, checkoutTransfers } from '@/server/db/schema';
 import type { ProviderEvent } from '@/server/providers';
+import { resolveActiveAttemptForSession } from './attempts';
 import { settleSession } from './settle';
 
 type Funding = Extract<ProviderEvent, { type: 'funding.received' }>;
@@ -40,6 +41,7 @@ export async function handleCheckoutFunding(event: Funding, tx: Tx): Promise<'ma
 
   try {
     await settleSession(row.sessionId, event.eventId, tx);
+    await resolveActiveAttemptForSession(row.sessionId, tx);
   } catch (error) {
     if (error instanceof AppError && error.code === 'CHECKOUT_CANCELLED') {
       await toSuspense(tx, event, 'session_cancelled');

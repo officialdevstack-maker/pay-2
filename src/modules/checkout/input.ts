@@ -13,10 +13,15 @@ const KEY = /^[A-Za-z0-9_-]{16,128}$/;
 
 export const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function parseCreateSession(raw: unknown, idempotencyKey: string | null): CreateSessionInput {
+export function parseAttemptKey(idempotencyKey: string | null): string {
   if (!idempotencyKey || !KEY.test(idempotencyKey)) {
     throw new AppError('BAD_REQUEST', 'A valid Idempotency-Key header is required.', 400);
   }
+  return idempotencyKey;
+}
+
+export function parseCreateSession(raw: unknown, idempotencyKey: string | null): CreateSessionInput {
+  const parsedIdempotencyKey = parseAttemptKey(idempotencyKey);
 
   const parsed = createBody.safeParse(raw);
   if (!parsed.success) {
@@ -41,6 +46,6 @@ export function parseCreateSession(raw: unknown, idempotencyKey: string | null):
     amount,
     merchantReference: parsed.data.merchantReference,
     description: parsed.data.description?.trim() || null,
-    idempotencyKey,
+    idempotencyKey: parsedIdempotencyKey,
   };
 }

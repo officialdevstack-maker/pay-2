@@ -326,11 +326,12 @@ export const checkoutSessions = pgTable(
     merchantId: uuid('merchant_id')
       .notNull()
       .references(() => merchants.id),
+    userId: uuid('user_id').references(() => payUsers.id),
     merchantReference: text('merchant_reference').notNull(),
     description: text('description'),
     amount: bigint('amount', { mode: 'bigint' }).notNull(),
     currency: text('currency').notNull().default('NGN'),
-    status: text('status').$type<'open' | 'paid' | 'cancelled'>().notNull().default('open'),
+    status: text('status').$type<'open' | 'paid' | 'cancelled' | 'expired'>().notNull().default('open'),
     idempotencyKey: text('idempotency_key').notNull(),
     requestHash: text('request_hash').notNull(),
     transactionId: uuid('transaction_id').references(() => transactions.id),
@@ -344,8 +345,44 @@ export const checkoutSessions = pgTable(
     check('checkout_sessions_reference_chk', sql`${t.reference} ~ '^SPY_[A-Z0-9]{16}$'`),
     check('checkout_sessions_amount_chk', sql`${t.amount} > 0`),
     check('checkout_sessions_currency_chk', sql`${t.currency} = 'NGN'`),
-    check('checkout_sessions_status_chk', sql`${t.status} in ('open', 'paid', 'cancelled')`),
+    check('checkout_sessions_status_chk', sql`${t.status} in ('open', 'paid', 'cancelled', 'expired')`),
     check('checkout_sessions_paid_chk', sql`(${t.status} = 'paid') = (${t.transactionId} is not null)`),
+  ],
+);
+
+export const checkoutAttempts = pgTable(
+  'checkout_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => checkoutSessions.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => payUsers.id),
+    method: text('method').$type<'wallet' | 'card' | 'bank_transfer'>().notNull(),
+    status: text('status').$type<'pending' | 'succeeded' | 'failed' | 'unknown'>().notNull().default('pending'),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    failureCode: text('failure_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('checkout_attempts_session_key_uq').on(t.sessionId, t.idempotencyKey),
+    uniqueIndex('checkout_attempts_active_uq')
+      .on(t.sessionId)
+      .where(sql`${t.status} in ('pending', 'unknown')`),
+    uniqueIndex('checkout_attempts_succeeded_uq')
+      .on(t.sessionId)
+      .where(sql`${t.status} = 'succeeded'`),
+    check('checkout_attempts_method_chk', sql`${t.method} in ('wallet', 'card', 'bank_transfer')`),
+    check('checkout_attempts_status_chk', sql`${t.status} in ('pending', 'succeeded', 'failed', 'unknown')`),
+    check('checkout_attempts_hash_chk', sql`${t.requestHash} ~ '^[a-f0-9]{64}$'`),
+    check(
+      'checkout_attempts_resolved_chk',
+      sql`(${t.status} in ('pending', 'unknown')) = (${t.resolvedAt} is null)`,
+    ),
   ],
 );
 

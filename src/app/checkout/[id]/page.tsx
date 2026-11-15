@@ -14,9 +14,9 @@ import { requireUser } from '@/modules/identity';
 export const metadata = { title: 'Checkout' };
 
 export default async function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
-  const found = await getSessionForCheckout(id);
+  const found = await getSessionForCheckout(id, user.id);
   if (!found) notFound();
 
   const { session, merchant } = found;

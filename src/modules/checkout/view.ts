@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { env } from '@/env';
 import { AppError } from '@/lib/errors';
 import { db } from '@/server/db/client';
@@ -11,8 +11,34 @@ export function effectiveStatus(session: CheckoutSession, now = new Date()): Ses
   return session.status === 'open' && session.expiresAt <= now ? 'expired' : session.status;
 }
 
-export async function getSessionForCheckout(id: string): Promise<{ session: CheckoutSession; merchant: Merchant } | null> {
+export async function getSessionForCheckout(
+  id: string,
+  userId: string,
+): Promise<{ session: CheckoutSession; merchant: Merchant } | null> {
   if (!SESSION_ID.test(id)) return null;
+
+  const [current] = await db
+    .select({ userId: checkoutSessions.userId })
+    .from(checkoutSessions)
+    .where(eq(checkoutSessions.id, id))
+    .limit(1);
+  if (!current || (current.userId !== null && current.userId !== userId)) return null;
+
+  if (current.userId === null) {
+    const [claimed] = await db
+      .update(checkoutSessions)
+      .set({ userId })
+      .where(and(eq(checkoutSessions.id, id), isNull(checkoutSessions.userId)))
+      .returning({ id: checkoutSessions.id });
+    if (!claimed) {
+      const [owner] = await db
+        .select({ userId: checkoutSessions.userId })
+        .from(checkoutSessions)
+        .where(and(eq(checkoutSessions.id, id), eq(checkoutSessions.userId, userId)))
+        .limit(1);
+      if (!owner) return null;
+    }
+  }
 
   const [row] = await db
     .select({ session: checkoutSessions, merchant: merchants })

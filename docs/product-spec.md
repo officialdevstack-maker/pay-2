@@ -108,6 +108,8 @@ Spurs product or approved merchant → authenticated checkout session → custom
 - Only a registered Spurs product or approved external merchant can create a checkout session. Spurs products use a private authenticated integration. External merchants use scoped, revocable API credentials; secrets are shown only at creation and never logged or returned in checkout responses.
 - A session contains its merchant identity, amount, currency, reference, status, expiry, and selected method where applicable. The server validates the merchant and amount; never trust a client-supplied success, merchant identity, or price.
 - `/checkout/[id]` shows the verified merchant name, amount, and available methods. The customer confirms the payment before money moves.
+- The first authenticated customer to open a session is bound to it; later customers cannot take it over. Each session has at most one active payment attempt, and an unknown attempt must be resolved before another method can start.
+- Checkout sessions currently expire after 30 minutes for all methods, including bank transfer. Revisit the transfer window before enabling longer-lived external checkout.
 - Wallet authorization must use the Wallet service as the source of truth for Wallet funds. Pay and Wallet must agree on one atomic, idempotent debit/authorization path before Wallet checkout is implemented.
 - Card data is entered only through an approved tokenized/embedded provider flow. Pay must not receive raw card credentials. The provider-brand conflict must be resolved before shipping the card form.
 - Bank transfer shows the account details associated with the checkout and remains pending until a verified event confirms payment. A timeout is not a decline.
@@ -226,8 +228,8 @@ Track these once analytics exist. Aim for direction, not vanity.
 | Wallet PIN entry and verification handoff | Wallet owns the PIN; checkout cannot collect or verify it by assumption |
 | External checkout customer identity: Spurs Account required or guest card checkout | Determines account creation, saved-card access, Wallet availability, and checkout session binding |
 | Provider card form: unbranded embedded tokenization or an approved branding exception | Determines whether the card method can satisfy provider secrecy |
-| Checkout result delivery: status polling or signed webhook/callback | Merchants need trusted, retryable final status without duplicate side effects |
+| Checkout result delivery for external merchants: signed webhook/callback details | Stage 1 uses authenticated status polling; external merchants need trusted, retryable delivery without duplicate side effects |
 | External merchant onboarding, due diligence, credential lifecycle and webhook configuration | External access must be approved, scoped, revocable, and supportable |
 | Merchant account mapping, settlement schedule, fees, refunds and reconciliation | Every merchant needs balanced postings and auditable, predictable payouts |
 | Funding-account and card top-up API contract for Wallet | Defines product mapping, authorization, idempotency, and how provider events credit Wallet |
-| Real provider, fee schedule, limits, and payment expiry policy | These affect eligibility, copy, and pending states |
+| Real provider, fee schedule, limits, and any change to the 30-minute payment expiry | These affect eligibility, copy, and pending states |
