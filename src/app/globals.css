@@ -151,8 +151,10 @@
   --color-avatar-6-bg: var(--avatar-6-bg);
   --color-avatar-6-fg: var(--avatar-6-fg);
 
-  --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+  /* --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif; */
 
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  
   --radius-control: 0.75rem;
   --radius-card: 1rem;
   --radius-sheet: 1.5rem;

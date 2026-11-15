@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import '@fontsource-variable/figtree';
 import './globals.css';
+import { Figtree } from 'next/font/google';
 
 export const metadata: Metadata = {
   title: { default: 'Spurs Pay', template: '%s · Spurs Pay' },
@@ -17,10 +17,18 @@ export const viewport: Viewport = {
   ],
 };
 
+const figtree = Figtree({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-figtree',
+  display: 'swap',
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  
+
   return (
     <html lang="en-NG">
-      <body className="antialiased">{children}</body>
+      <body className={`antialiased ${figtree.variable}`}>{children}</body>
     </html>
   );
 }
