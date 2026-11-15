@@ -84,7 +84,7 @@ The test: could this screen be pasted into ten other apps unchanged? If yes, fin
 
 ## 6. Brand expression
 
-- **Wordmark.** "Spurs Pay" set in Figtree 700 with slightly tight tracking. No logo graphic until one is designed. Use the wordmark in the header and on sign-in and signed-out screens.
+- **Wordmark.** "Spurs Pay" set in Inter 500 with slightly tight tracking. No logo graphic until one is designed. Use the wordmark in the header and on sign-in and signed-out screens.
 - **App icon (PWA).** A single geometric letter S monogram on solid teal, no gradient, no glow. Produce at 192 and 512 px plus a maskable version with safe padding.
 - **Colour.** Teal `#0b6e6e` (light) and `#3fc1b7` (dark) on ink `#0f1b2d` and cool greys. Keep the palette in `globals.css` as the only source.
 - **Typeface.** Inter, loaded through `next/font/google`. Weights in use: 400 and 500. Verify that the `₦` glyph renders in Inter at every weight used. If it falls back to another font, include a fallback that has it and check that it matches in size and weight. This is a mandatory check for a Naira app.

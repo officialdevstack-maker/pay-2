@@ -89,7 +89,7 @@ Review each screen at 360 px, 430 px and 1280 px wide, in light and dark.
 - [ ] Icons imported individually, no barrel imports
 - [ ] No Framer Motion unless a gesture needs it, and only imported in that component
 - [ ] Images: none in the core app. Any new asset has a width and height
-- [ ] No layout shift when fonts load (Figtree is bundled through `@fontsource-variable/figtree`)
+- [ ] No layout shift when fonts load (Inter is loaded through `next/font/google` and the family is pinned in `src/app/layout.tsx`)
 - [ ] `next build` output shows no unexpected growth in the first-load JS for the route
 
 ## 9. Provider secrecy
