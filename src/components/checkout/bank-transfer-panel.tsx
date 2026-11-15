@@ -23,15 +23,17 @@ export function BankTransferPanel({
   sessionId,
   amount,
   initial,
+  initialWaiting = false,
 }: {
   sessionId: string;
   amount: string;
   initial: Details | null;
+  initialWaiting?: boolean;
 }) {
   const router = useRouter();
   const [details, setDetails] = useState<Details | null>(initial);
   const [busy, setBusy] = useState(false);
-  const [waiting, setWaiting] = useState(false);
+  const [waiting, setWaiting] = useState(initialWaiting);
   const [error, setError] = useState<string | null>(null);
   const idempotencyKey = useRef<string | null>(null);
 

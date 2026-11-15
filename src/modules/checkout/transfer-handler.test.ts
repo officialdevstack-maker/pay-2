@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
-import { getBalance, openAccount } from '@/modules/ledger';
+import { getBalance, openAccount, systemAccountId } from '@/modules/ledger';
 import { db } from '@/server/db/client';
-import { checkoutSessions, checkoutTransfers, merchants } from '@/server/db/schema';
+import { checkoutAttempts, checkoutSessions, checkoutTransfers, merchants, payUsers } from '@/server/db/schema';
+import { beginCheckoutAttempt } from './attempts';
 import { createSession } from './create';
 import { handleCheckoutFunding } from './transfer-handler';
 
@@ -81,5 +82,47 @@ integration('checkout bank transfer settlement', () => {
 
   it('leaves unknown accounts for another handler', async () => {
     expect(await run(event('9800000000', 1_000n))).toBe('unmatched');
+  });
+
+  it('settles a pending bank transfer attempt even after the session expiry', async () => {
+    const amount = 75_000n;
+    const { ledgerAccountId, session, accountNumber } = await setup(amount);
+    const [user] = await db.insert(payUsers).values({ accountsSub: randomUUID() }).returning();
+    if (!user) throw new Error('Test user could not be created.');
+    await db.update(checkoutSessions).set({ userId: user.id }).where(eq(checkoutSessions.id, session.id));
+    const { attempt } = await beginCheckoutAttempt({
+      sessionId: session.id,
+      userId: user.id,
+      method: 'bank_transfer',
+      idempotencyKey: randomUUID(),
+      requestHash: 'a'.repeat(64),
+    });
+    await db
+      .update(checkoutSessions)
+      .set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(eq(checkoutSessions.id, session.id));
+
+    expect(await run(event(accountNumber, amount))).toBe('matched');
+    expect(await getBalance(ledgerAccountId)).toBe(amount);
+
+    const [updatedSession] = await db.select().from(checkoutSessions).where(eq(checkoutSessions.id, session.id));
+    const [updatedAttempt] = await db.select().from(checkoutAttempts).where(eq(checkoutAttempts.id, attempt.id));
+    expect(updatedSession?.status).toBe('paid');
+    expect(updatedAttempt?.status).toBe('succeeded');
+  });
+
+  it('sends a late transfer to suspense when no active attempt remains', async () => {
+    const amount = 81_000n;
+    const { ledgerAccountId, session, accountNumber } = await setup(amount);
+    await db
+      .update(checkoutSessions)
+      .set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(eq(checkoutSessions.id, session.id));
+    const suspenseAccountId = await systemAccountId('suspense');
+    const balanceBefore = await getBalance(suspenseAccountId);
+
+    expect(await run(event(accountNumber, amount))).toBe('matched');
+    expect(await getBalance(ledgerAccountId)).toBe(0n);
+    expect(await getBalance(suspenseAccountId)).toBe(balanceBefore + amount);
   });
 });

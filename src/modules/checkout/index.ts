@@ -13,6 +13,23 @@ export { createSession, findMerchantByClient } from './create';
 export { parseAttemptKey, parseCreateSession, SESSION_ID } from './input';
 export { checkoutRoute } from './route';
 export { settleSession } from './settle';
+export {
+  canStartAttempt,
+  deriveCheckoutStatus,
+  type AttemptStatus,
+  type CheckoutStatusInput,
+  type PublicCheckoutStatus,
+  type SessionStatus,
+} from './status';
 export { getTransferDetails, startBankTransfer, type TransferDetails } from './transfer';
-export { effectiveStatus, getSessionForCheckout, getSessionForMerchant, returnHref, serializeSession } from './view';
-export type { CheckoutSession, Merchant, SessionStatus } from './types';
+export {
+  effectiveStatus,
+  getCheckoutStatus,
+  getSessionForCheckout,
+  getSessionForMerchant,
+  getSessionForMerchantByReference,
+  returnHref,
+  serializeMerchantStatus,
+  serializeSession,
+} from './view';
+export type { CheckoutSession, Merchant } from './types';

@@ -106,15 +106,16 @@ Spurs product or approved merchant → authenticated checkout session → custom
 ```
 
 - Only a registered Spurs product or approved external merchant can create a checkout session. Spurs products use a private authenticated integration. External merchants use scoped, revocable API credentials; secrets are shown only at creation and never logged or returned in checkout responses.
+- Spurs products poll `GET /api/merchant/checkout-sessions/{reference}` with an Accounts-issued token. Pay derives the caller's `client_id` from token introspection, maps it to `merchants.client_id`, and scopes the lookup to that merchant.
 - A session contains its merchant identity, amount, currency, reference, status, expiry, and selected method where applicable. The server validates the merchant and amount; never trust a client-supplied success, merchant identity, or price.
 - `/checkout/[id]` shows the verified merchant name, amount, and available methods. The customer confirms the payment before money moves.
 - The first authenticated customer to open a session is bound to it; later customers cannot take it over. Each session has at most one active payment attempt, and an unknown attempt must be resolved before another method can start.
-- Checkout sessions currently expire after 30 minutes for all methods, including bank transfer. Revisit the transfer window before enabling longer-lived external checkout.
+- Checkout sessions currently expire after 60 minutes for all methods; this is a placeholder to confirm before launch. An active payment attempt remains pending beyond `expires_at`. Late bank-transfer funds without an active attempt go to suspense.
 - Wallet authorization must use the Wallet service as the source of truth for Wallet funds. Pay and Wallet must agree on one atomic, idempotent debit/authorization path before Wallet checkout is implemented.
 - Card data is entered only through an approved tokenized/embedded provider flow. Pay must not receive raw card credentials. The provider-brand conflict must be resolved before shipping the card form.
 - Bank transfer shows the account details associated with the checkout and remains pending until a verified event confirms payment. A timeout is not a decline.
 - A completed payment posts a balanced `payment` transaction to the merchant's ledger account. Retries reuse the same idempotency key. Corrections use linked reversal entries, never edits.
-- The merchant reads or receives the server-confirmed final status. External webhook delivery is signed, retried idempotently, and does not change payment state if delivery fails. The internal Spurs product delivery contract is also retryable.
+- The merchant reads or receives the server-confirmed final status. External webhook delivery is signed, retried idempotently, and does not change payment state if delivery fails. The internal Spurs product polling contract is authenticated and read-only.
 - Settlement moves only reconciled merchant funds to the merchant's configured destination, with an auditable ledger trail and clear pending/paid/failed status.
 
 ### 6.5 Wallet funding through Pay
@@ -232,4 +233,4 @@ Track these once analytics exist. Aim for direction, not vanity.
 | External merchant onboarding, due diligence, credential lifecycle and webhook configuration | External access must be approved, scoped, revocable, and supportable |
 | Merchant account mapping, settlement schedule, fees, refunds and reconciliation | Every merchant needs balanced postings and auditable, predictable payouts |
 | Funding-account and card top-up API contract for Wallet | Defines product mapping, authorization, idempotency, and how provider events credit Wallet |
-| Real provider, fee schedule, limits, and any change to the 30-minute payment expiry | These affect eligibility, copy, and pending states |
+| Real provider, fee schedule, limits, and confirmation of the 60-minute payment expiry | These affect eligibility, copy, and pending states |

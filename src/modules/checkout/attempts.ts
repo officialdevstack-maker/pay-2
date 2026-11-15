@@ -71,6 +71,10 @@ export async function beginCheckoutAttempt(
       return { attempt: existing, replayed: true };
     }
 
+    if (session.status !== 'open') {
+      throw new AppError('CHECKOUT_UNAVAILABLE', 'This checkout is no longer available.', 409);
+    }
+
     const [active] = await tx
       .select()
       .from(checkoutAttempts)

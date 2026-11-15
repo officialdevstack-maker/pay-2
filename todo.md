@@ -194,7 +194,8 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 - [ ] Implement card payment with approved tokenization and provider-neutral UI
 - [x] Implement bank-transfer checkout with verified webhook status and safe pending/retry handling
 - [x] Post a balanced `payment` transaction to the merchant ledger account; idempotent retries and linked reversals
-- [ ] Define authenticated status polling for Spurs products and signed, retryable webhook delivery for external merchants
+- [x] Define authenticated status polling for Spurs products at `GET /api/merchant/checkout-sessions/{reference}`
+- [ ] Define signed, retryable webhook delivery for external merchants
 - [ ] Tests: session ownership/expiry, amount tampering, each method, concurrent submit, idempotency replay/mismatch, unknown outcome, reversal
 
 ### Phase 8: Activity, receipts, notifications

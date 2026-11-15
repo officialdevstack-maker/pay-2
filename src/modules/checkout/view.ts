@@ -1,14 +1,46 @@
 import 'server-only';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { env } from '@/env';
 import { AppError } from '@/lib/errors';
 import { db } from '@/server/db/client';
-import { checkoutSessions, merchants } from '@/server/db/schema';
+import { checkoutAttempts, checkoutSessions, merchants, transactions } from '@/server/db/schema';
 import { SESSION_ID } from './input';
-import type { CheckoutSession, Merchant, SessionStatus } from './types';
+import { deriveCheckoutStatus, type PublicCheckoutStatus } from './status';
+import type { CheckoutSession, Merchant } from './types';
 
-export function effectiveStatus(session: CheckoutSession, now = new Date()): SessionStatus {
-  return session.status === 'open' && session.expiresAt <= now ? 'expired' : session.status;
+export function effectiveStatus(session: CheckoutSession, now = new Date()): PublicCheckoutStatus {
+  return deriveCheckoutStatus({
+    sessionStatus: session.status,
+    expiresAt: session.expiresAt,
+    latestAttemptStatus: null,
+    reversed: false,
+    now,
+  });
+}
+
+export async function getCheckoutStatus(session: CheckoutSession, now = new Date()): Promise<PublicCheckoutStatus> {
+  const [latestAttempt] = await db
+    .select({ status: checkoutAttempts.status })
+    .from(checkoutAttempts)
+    .where(eq(checkoutAttempts.sessionId, session.id))
+    .orderBy(desc(checkoutAttempts.createdAt), desc(checkoutAttempts.id))
+    .limit(1);
+
+  const [reversal] = session.transactionId
+    ? await db
+        .select({ id: transactions.id })
+        .from(transactions)
+        .where(eq(transactions.reversesTransactionId, session.transactionId))
+        .limit(1)
+    : [];
+
+  return deriveCheckoutStatus({
+    sessionStatus: session.status,
+    expiresAt: session.expiresAt,
+    latestAttemptStatus: latestAttempt?.status ?? null,
+    reversed: Boolean(reversal),
+    now,
+  });
 }
 
 export async function getSessionForCheckout(
@@ -62,22 +94,54 @@ export async function getSessionForMerchant(merchant: Merchant, id: string): Pro
   return session;
 }
 
-export function returnHref(session: CheckoutSession, merchant: Merchant): string {
+export async function getSessionForMerchantByReference(merchant: Merchant, reference: string): Promise<CheckoutSession> {
+  const notFound = () => new AppError('CHECKOUT_NOT_FOUND', 'We could not find that checkout session.', 404);
+  if (!/^SPY_[A-Z0-9]{16}$/.test(reference)) throw notFound();
+
+  const [session] = await db
+    .select()
+    .from(checkoutSessions)
+    .where(and(eq(checkoutSessions.reference, reference), eq(checkoutSessions.merchantId, merchant.id)))
+    .limit(1);
+  if (!session) throw notFound();
+  return session;
+}
+
+export function returnHref(
+  session: CheckoutSession,
+  merchant: Merchant,
+  status = effectiveStatus(session),
+): string {
   const url = new URL(merchant.returnUrl);
   url.searchParams.set('reference', session.merchantReference);
-  url.searchParams.set('status', effectiveStatus(session));
+  url.searchParams.set('status', status);
   return url.toString();
 }
 
-export function serializeSession(session: CheckoutSession) {
+export function serializeSession(
+  session: CheckoutSession,
+  status: PublicCheckoutStatus = effectiveStatus(session),
+) {
   return {
     id: session.id,
     reference: session.reference,
     merchantReference: session.merchantReference,
-    status: effectiveStatus(session),
+    status,
     amountKobo: session.amount.toString(),
     currency: 'NGN' as const,
     checkoutUrl: new URL(`/checkout/${session.id}`, env.APP_URL).toString(),
+    expiresAt: session.expiresAt.toISOString(),
+    paidAt: session.paidAt?.toISOString() ?? null,
+  };
+}
+
+export function serializeMerchantStatus(session: CheckoutSession, status: PublicCheckoutStatus) {
+  return {
+    reference: session.reference,
+    merchantReference: session.merchantReference,
+    status,
+    amount: session.amount.toString(),
+    currency: session.currency,
     expiresAt: session.expiresAt.toISOString(),
     paidAt: session.paidAt?.toISOString() ?? null,
   };

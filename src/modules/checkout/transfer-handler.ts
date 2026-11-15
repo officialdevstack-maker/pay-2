@@ -40,11 +40,15 @@ export async function handleCheckoutFunding(event: Funding, tx: Tx): Promise<'ma
   }
 
   try {
-    await settleSession(row.sessionId, event.eventId, tx);
+    await settleSession(row.sessionId, event.eventId, tx, 'bank_transfer');
     await resolveActiveAttemptForSession(row.sessionId, tx);
   } catch (error) {
     if (error instanceof AppError && error.code === 'CHECKOUT_CANCELLED') {
       await toSuspense(tx, event, 'session_cancelled');
+      return 'matched';
+    }
+    if (error instanceof AppError && error.code === 'CHECKOUT_EXPIRED') {
+      await toSuspense(tx, event, 'session_expired');
       return 'matched';
     }
     throw error;

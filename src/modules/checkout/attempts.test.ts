@@ -6,6 +6,7 @@ import { db } from '@/server/db/client';
 import { checkoutSessions, merchants, payUsers } from '@/server/db/schema';
 import { createSession } from './create';
 import { beginCheckoutAttempt, resolveCheckoutAttempt } from './attempts';
+import { getSessionForCheckout, getSessionForMerchantByReference } from './view';
 
 const hasTestDatabase = Boolean(
   process.env.LEDGER_TEST_DATABASE_URL && process.env.LEDGER_TEST_DATABASE_URL === process.env.DATABASE_URL,
@@ -42,7 +43,7 @@ integration('checkout attempts', () => {
       description: null,
       idempotencyKey: randomUUID(),
     });
-    return { session, user, otherUser };
+    return { session, user, otherUser, merchant };
   }
 
   const input = (sessionId: string, userId: string, idempotencyKey = randomUUID(), requestHash = 'a'.repeat(64)) => ({
@@ -102,14 +103,13 @@ integration('checkout attempts', () => {
 
   it('serializes concurrent submissions into one active attempt', async () => {
     const { session, user } = await setup();
-    const [first, second] = await Promise.all([
-      beginCheckoutAttempt(input(session.id, user.id, randomUUID())),
-      beginCheckoutAttempt(input(session.id, user.id, randomUUID())),
-    ]);
+    const key = randomUUID();
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => beginCheckoutAttempt(input(session.id, user.id, key))),
+    );
 
-    expect(first.attempt.id).toBe(second.attempt.id);
-    expect(first.attempt.status).toBe('pending');
-    expect(second.attempt.status).toBe('pending');
+    expect(new Set(results.map(({ attempt }) => attempt.id)).size).toBe(1);
+    expect(results.filter(({ replayed }) => !replayed)).toHaveLength(1);
   });
 
   it('keeps the session bound to its first customer', async () => {
@@ -119,8 +119,21 @@ integration('checkout attempts', () => {
     await expect(beginCheckoutAttempt(input(session.id, otherUser.id))).rejects.toMatchObject({
       code: 'CHECKOUT_NOT_FOUND',
     });
+    await expect(getSessionForCheckout(session.id, otherUser.id)).resolves.toBeNull();
     const [bound] = await db.select().from(checkoutSessions).where(eq(checkoutSessions.id, session.id));
     expect(bound?.userId).toBe(user.id);
+  });
+
+  it('scopes reference lookups to the authenticated merchant', async () => {
+    const owner = await setup();
+    const other = await setup();
+
+    await expect(getSessionForMerchantByReference(owner.merchant, owner.session.reference)).resolves.toMatchObject({
+      id: owner.session.id,
+    });
+    await expect(
+      getSessionForMerchantByReference(other.merchant, owner.session.reference),
+    ).rejects.toMatchObject({ code: 'CHECKOUT_NOT_FOUND' });
   });
 
   it('rejects a new attempt after session expiry', async () => {

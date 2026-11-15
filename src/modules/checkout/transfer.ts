@@ -7,7 +7,7 @@ import { db } from '@/server/db/client';
 import { checkoutTransfers } from '@/server/db/schema';
 import { getProvider, isBrandSafe, mapProviderError, ProviderError } from '@/server/providers';
 import { beginCheckoutAttempt, resolveCheckoutAttempt } from './attempts';
-import { effectiveStatus, getSessionForCheckout } from './view';
+import { getCheckoutStatus, getSessionForCheckout } from './view';
 
 export interface TransferDetails {
   bankName: string;
@@ -37,7 +37,8 @@ export async function startBankTransfer(
   if (!found) throw new AppError('CHECKOUT_NOT_FOUND', 'We could not find that checkout session.', 404);
 
   const { session, merchant } = found;
-  if (effectiveStatus(session) !== 'open') {
+  const status = await getCheckoutStatus(session);
+  if (status !== 'open' && status !== 'pending') {
     throw new AppError('CHECKOUT_UNAVAILABLE', 'This checkout is no longer available.', 409);
   }
 
@@ -86,18 +87,32 @@ export async function startBankTransfer(
     throw new AppError('SERVICE_UNAVAILABLE', 'This service is temporarily unavailable. Try again shortly.', 503);
   }
 
-  await db
-    .insert(checkoutTransfers)
-    .values({
-      sessionId: session.id,
-      accountNumber: account.accountNumber,
-      accountName: account.accountName,
-      bankName: account.bankName,
-      providerRef: account.providerRef,
-    })
-    .onConflictDoNothing({ target: checkoutTransfers.sessionId });
+  try {
+    await db
+      .insert(checkoutTransfers)
+      .values({
+        sessionId: session.id,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
+        bankName: account.bankName,
+        providerRef: account.providerRef,
+      })
+      .onConflictDoNothing({ target: checkoutTransfers.sessionId });
+  } catch (error) {
+    await resolveCheckoutAttempt(attempt.id, {
+      status: 'unknown',
+      failureCode: 'TRANSFER_DETAILS_SAVE_FAILED',
+    });
+    throw error;
+  }
 
   const saved = await getTransferDetails(session.id);
-  if (!saved) throw new AppError('INTERNAL', 'Could not save transfer details.');
+  if (!saved) {
+    await resolveCheckoutAttempt(attempt.id, {
+      status: 'unknown',
+      failureCode: 'TRANSFER_DETAILS_MISSING',
+    });
+    throw new AppError('INTERNAL', 'Could not save transfer details.');
+  }
   return saved;
 }

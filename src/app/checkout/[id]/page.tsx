@@ -8,7 +8,7 @@ import { ListGroup } from '@/components/ui/list-group';
 import { ListRow } from '@/components/ui/list-row';
 import { cn } from '@/lib/cn';
 import { formatReceiptDate } from '@/lib/datetime';
-import { effectiveStatus, getSessionForCheckout, getTransferDetails, returnHref } from '@/modules/checkout';
+import { getCheckoutStatus, getSessionForCheckout, getTransferDetails, returnHref } from '@/modules/checkout';
 import { requireUser } from '@/modules/identity';
 
 export const metadata = { title: 'Checkout' };
@@ -20,9 +20,10 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
   if (!found) notFound();
 
   const { session, merchant } = found;
-  const status = effectiveStatus(session);
-  const back = returnHref(session, merchant);
-  const transfer = status === 'open' ? await getTransferDetails(session.id) : null;
+  const status = await getCheckoutStatus(session);
+  const back = returnHref(session, merchant, status);
+  const transfer =
+    status === 'open' || status === 'pending' ? await getTransferDetails(session.id) : null;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))]">
@@ -39,10 +40,14 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
       <ListGroup>
         <ListRow title="Payment reference" subtitle={session.reference} />
         {status === 'open' ? <ListRow title="Pay before" subtitle={formatReceiptDate(session.expiresAt)} /> : null}
+        {status === 'pending' ? <ListRow title="Payment status" subtitle="Waiting for confirmation" /> : null}
         {status === 'paid' && session.paidAt ? <ListRow title="Paid" subtitle={formatReceiptDate(session.paidAt)} /> : null}
       </ListGroup>
 
       {status === 'paid' ? <StatusPanel tone="success" title="Payment confirmed" body={`${merchant.name} has been paid.`} /> : null}
+      {status === 'reversed' ? (
+        <StatusPanel tone="danger" title="This payment was reversed" body="Contact the merchant if you need help." />
+      ) : null}
       {status === 'expired' ? (
         <StatusPanel tone="warning" title="This checkout has expired" body="Go back to the merchant to start a new payment." />
       ) : null}
@@ -50,8 +55,13 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
         <StatusPanel tone="danger" title="This checkout was cancelled" body="Go back to the merchant to start a new payment." />
       ) : null}
 
-      {status === 'open' ? (
-        <BankTransferPanel sessionId={session.id} amount={session.amount.toString()} initial={transfer} />
+      {status === 'open' || status === 'pending' ? (
+        <BankTransferPanel
+          sessionId={session.id}
+          amount={session.amount.toString()}
+          initial={transfer}
+          initialWaiting={status === 'pending'}
+        />
       ) : null}
 
       <a href={back} className={cn(buttonClasses(status === 'paid' ? 'primary' : 'ghost', 'lg', 'mt-auto w-full'))}>
