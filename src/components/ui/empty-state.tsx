@@ -14,7 +14,7 @@ export function EmptyState({ icon: Icon, children, action, className }: EmptySta
     <div className={cn('flex flex-col items-center gap-3 px-6 py-8 text-center', className)}>
       <Icon aria-hidden="true" size={24} strokeWidth={1.75} className="text-muted" />
       <p className="type-body">{children}</p>
-      {action ? <div className="type-body-sm font-semibold text-primary">{action}</div> : null}
+      {action ? <div className="type-body-sm font-medium text-primary">{action}</div> : null}
     </div>
   );
 }

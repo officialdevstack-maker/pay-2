@@ -16,7 +16,7 @@ export function RecentActivity({ items }: { items: ActivityItem[] }) {
         <h2 id="activity-heading" className="type-heading">
           Recent payments
         </h2>
-        <Link href="/activity" className="type-body-sm inline-flex h-11 items-center px-2 font-semibold text-primary">
+        <Link href="/activity" className="type-body-sm inline-flex h-11 items-center px-2 font-medium text-primary">
           See all
         </Link>
       </div>

@@ -17,7 +17,7 @@ export function Segmented({ label, items }: { label: string; items: SegmentItem[
             href={item.href}
             aria-current={item.active ? 'page' : undefined}
             className={cn(
-              'type-body-sm inline-flex h-9 shrink-0 items-center rounded-lg border px-3 font-semibold transition duration-press',
+              'type-body-sm inline-flex h-9 shrink-0 items-center rounded-lg border px-3 font-medium transition duration-press',
               item.active ? 'border-border bg-surface' : 'border-transparent text-muted',
             )}
           >

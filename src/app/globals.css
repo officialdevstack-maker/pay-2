@@ -151,10 +151,8 @@
   --color-avatar-6-bg: var(--avatar-6-bg);
   --color-avatar-6-fg: var(--avatar-6-fg);
 
-  /* --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif; */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  
   --radius-control: 0.75rem;
   --radius-card: 1rem;
   --radius-sheet: 1.5rem;
@@ -177,18 +175,18 @@ body {
 
 .amount {
   font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-@utility type-amount-xl { font-size: 3rem; line-height: 3.25rem; font-weight: 700; letter-spacing: -0.02em; }
-@utility type-amount-lg { font-size: 2.5rem; line-height: 2.75rem; font-weight: 700; letter-spacing: -0.02em; }
-@utility type-amount-md { font-size: 1.25rem; line-height: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
-@utility type-title { font-size: 1.5rem; line-height: 1.875rem; font-weight: 700; letter-spacing: -0.01em; }
-@utility type-heading { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; }
+@utility type-amount-xl { font-size: 3rem; line-height: 3.5rem; font-weight: 400; letter-spacing: -0.025em; }
+@utility type-amount-lg { font-size: 2.5rem; line-height: 3rem; font-weight: 400; letter-spacing: -0.02em; }
+@utility type-amount-md { font-size: 1.125rem; line-height: 1.5rem; font-weight: 500; letter-spacing: -0.005em; }
+@utility type-title { font-size: 1.75rem; line-height: 2.25rem; font-weight: 400; letter-spacing: -0.01em; }
+@utility type-heading { font-size: 1.125rem; line-height: 1.5rem; font-weight: 500; }
 @utility type-body { font-size: 1rem; line-height: 1.5rem; font-weight: 400; }
-@utility type-body-strong { font-size: 1rem; line-height: 1.5rem; font-weight: 600; }
+@utility type-body-strong { font-size: 1rem; line-height: 1.5rem; font-weight: 500; }
 @utility type-body-sm { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
-@utility type-caption { font-size: 0.75rem; line-height: 1rem; font-weight: 500; }
+@utility type-caption { font-size: 0.75rem; line-height: 1rem; font-weight: 500; letter-spacing: 0.01em; }
 
 @utility duration-press { transition-duration: 100ms; }
 @utility duration-swap { transition-duration: 150ms; }

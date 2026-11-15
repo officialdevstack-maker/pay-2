@@ -14,7 +14,7 @@ export function PageHeader({
   return (
     <header className="mb-6 space-y-2">
       {back ? (
-        <Link href={back.href} className="type-body-sm -ml-2 inline-flex h-11 items-center gap-1 px-2 font-semibold text-primary">
+        <Link href={back.href} className="type-body-sm -ml-2 inline-flex h-11 items-center gap-1 px-2 font-medium text-primary">
           <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.75} />
           {back.label}
         </Link>

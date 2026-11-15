@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <ShellFrame initialCollapsed={collapsed}>
       <a
         href="#main"
-        className="type-body-sm sr-only font-semibold focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-primary"
+        className="type-body-sm sr-only font-medium focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-primary"
       >
         Skip to content
       </a>

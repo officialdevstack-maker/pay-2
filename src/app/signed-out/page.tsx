@@ -15,7 +15,7 @@ export default async function SignedOutPage({
           ? 'The sign-in was cancelled or expired. Try again.'
           : 'You have signed out of your Spurs account.'}
       </p>
-      <a href="/auth/login" className="text-sm font-semibold text-primary">
+      <a href="/auth/login" className="text-sm font-medium text-primary">
         Sign in again
       </a>
     </main>

@@ -41,7 +41,7 @@ export function Avatar({ name, seed, size = 40, decorative = true, className }: 
       aria-label={decorative ? undefined : name}
       role={decorative ? undefined : 'img'}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold',
+        'inline-flex shrink-0 items-center justify-center rounded-full font-medium',
         SIZES[size],
         TINTS[tintIndex(seed ?? name)],
         className,

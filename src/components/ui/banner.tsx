@@ -23,7 +23,7 @@ export function Banner({ tone = 'info', children, action, className }: BannerPro
     <div role={role} className={cn('flex items-start gap-3 rounded-control px-4 py-3', box, className)}>
       <Icon aria-hidden="true" size={20} strokeWidth={1.75} className="mt-0.5 shrink-0" />
       <p className="type-body-sm flex-1">{children}</p>
-      {action ? <div className="type-body-sm shrink-0 font-semibold text-primary">{action}</div> : null}
+      {action ? <div className="type-body-sm shrink-0 font-medium text-primary">{action}</div> : null}
     </div>
   );
 }

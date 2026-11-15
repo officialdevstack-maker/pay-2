@@ -65,26 +65,26 @@ Contrast: body text and `muted` on `background` and `surface` must stay at 4.5:1
 
 ## 3. Typography
 
-One family: Figtree Variable (`font-sans`). Weights 400, 500, 600, 700 only.
+One family: Inter (`font-sans`). Weights 400 and 500 only.
 
 | Role | Size / line | Weight | Tracking | Use |
 | --- | --- | --- | --- | --- |
-| `amount-xl` | 48 / 52 | 700 | −0.02em | Checkout and receipt amount |
-| `amount-lg` | 40 / 44 | 700 | −0.02em | Reserved for a prominent payment amount |
-| `amount-md` | 20 / 24 | 600 | −0.01em | Checkout summary and list amounts |
-| `title` | 24 / 30 | 700 | −0.01em | Screen title |
-| `heading` | 18 / 24 | 600 | 0 | Section heading |
+| `amount-xl` | 48 / 56 | 400 | −0.025em | Checkout and receipt amount |
+| `amount-lg` | 40 / 48 | 400 | −0.02em | Reserved for a prominent payment amount |
+| `amount-md` | 18 / 24 | 500 | −0.005em | Checkout summary and list amounts |
+| `title` | 28 / 36 | 400 | −0.01em | Screen title |
+| `heading` | 18 / 24 | 500 | 0 | Section heading |
 | `body` | 16 / 24 | 400 | 0 | Default text, input text |
-| `body-strong` | 16 / 24 | 600 | 0 | Row primary text, buttons (lg) |
+| `body-strong` | 16 / 24 | 500 | 0 | Row primary text, buttons (lg) |
 | `body-sm` | 14 / 20 | 400 | 0 | Helper text, secondary row text, buttons (md) |
-| `caption` | 12 / 16 | 500 | 0 | Timestamps, badges. Never below 12 |
+| `caption` | 12 / 16 | 500 | 0.01em | Timestamps, badges. Never below 12 |
 
 Rules:
 
 - Every amount uses the `.amount` class (tabular, lining numerals, tight tracking).
 - Inputs are 16 px or larger so iOS does not zoom on focus.
 - Sentence case everywhere. No uppercase transforms.
-- Check the `₦` glyph at 400, 500, 600 and 700 before locking the scale. If Figtree falls back for it, add a fallback family that matches size and weight and set it in `--font-sans`.
+- Check the `₦` glyph at 400 and 500 before locking the scale. If Inter falls back for it, add a fallback family that matches size and weight and set it in `--font-sans`.
 
 Tailwind mapping: define the roles as utilities in `globals.css` (`@utility text-title { ... }`) so components say `text-title`, not a string of sizes.
 

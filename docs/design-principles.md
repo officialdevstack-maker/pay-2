@@ -87,7 +87,7 @@ The test: could this screen be pasted into ten other apps unchanged? If yes, fin
 - **Wordmark.** "Spurs Pay" set in Figtree 700 with slightly tight tracking. No logo graphic until one is designed. Use the wordmark in the header and on sign-in and signed-out screens.
 - **App icon (PWA).** A single geometric letter S monogram on solid teal, no gradient, no glow. Produce at 192 and 512 px plus a maskable version with safe padding.
 - **Colour.** Teal `#0b6e6e` (light) and `#3fc1b7` (dark) on ink `#0f1b2d` and cool greys. Keep the palette in `globals.css` as the only source.
-- **Typeface.** Figtree Variable, already installed through `@fontsource-variable/figtree`. Weights in use: 400, 500, 600, 700. Verify that the `₦` glyph renders in Figtree at every weight used. If it falls back to another font, include a fallback that has it and check that it matches in size and weight. This is a mandatory check for a Naira app.
+- **Typeface.** Inter, loaded through `next/font/google`. Weights in use: 400 and 500. Verify that the `₦` glyph renders in Inter at every weight used. If it falls back to another font, include a fallback that has it and check that it matches in size and weight. This is a mandatory check for a Naira app.
 - **Imagery.** None in the core app. No stock photos, no illustrations of people. Empty states use a small icon and a sentence.
 - **Avatars.** Initials on a muted tint, chosen deterministically from the name, from a set of six tints derived from the palette. Never random per render.
 
@@ -150,3 +150,4 @@ When you choose against a rule in this document, add a line here with the date, 
 | 2026-11-16 | Shell | The desktop rail is collapsible (240 ↔ 72) and its state lives in a cookie, not `localStorage`. | The server can render the correct width on first paint, so there is no layout jump. |
 | 2026-11-16 | Shell | Sign out appears in the desktop rail footer as well as in Settings. | It is one click on desktop, and Settings stays the home on mobile. |
 | 2026-11-16 | Payment methods | Use a single list surface for saved cards and the bank-transfer option, and hide Add payment method until tokenized card entry exists. | The app should stay neutral and route-safe, with no fake or disabled primaries before the secure card flow is approved. |
+| 2026-11-16 | Typography | Switched Figtree to Inter, regular-weight titles and amounts. | Closer to Google Pay, and the verified `₦` glyph reads clearly in the app. |
