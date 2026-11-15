@@ -4,8 +4,10 @@ import { env } from '@/env';
 import { SpursAuth } from '@spurs/auth';
 
 export function authClient() {
+  const redirectUri = new URL('/auth/callback', env.APP_URL).toString();
+  console.log({ redirectUri })
   return new SpursAuth({
-    
+
     issuer: env.ACCOUNTS_ISSUER,
     clientId: env.ACCOUNTS_CLIENT_ID,
     clientSecret: env.ACCOUNTS_CLIENT_SECRET,

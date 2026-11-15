@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check:leaks": "node scripts/check-provider-leaks.mjs",
     "check:leaks:source": "node scripts/check-provider-leaks.mjs --source-only",
+    "db:check": "node scripts/db-check.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

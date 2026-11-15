@@ -1,4 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
+import { createRequire } from 'node:module';
+
+const { loadEnvConfig } = createRequire(import.meta.url)('@next/env');
+loadEnvConfig(process.cwd());
 
 export default defineConfig({
   dialect: 'postgresql',
