@@ -1,67 +1,55 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { cookies } from 'next/headers';
+import { BottomNav } from '@/components/shell/app-nav';
+import { ShellFrame } from '@/components/shell/shell-frame';
+import { Sidebar } from '@/components/shell/sidebar';
+import { Banner } from '@/components/ui/banner';
+import { BUILT_NAV, NAV_COOKIE } from '@/config/nav';
+import { env } from '@/env';
 import { cn } from '@/lib/cn';
 import { requireUser } from '@/modules/identity';
 
-const NAV = [
-  { label: 'Home', href: '/', ready: true },
-  { label: 'Pay', href: '/pay', ready: false },
-  { label: 'Activity', href: '/activity', ready: false },
-  { label: 'Settings', href: '/settings', ready: false },
-] as const;
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const collapsed = (await cookies()).get(NAV_COOKIE)?.value === 'collapsed';
+  const accountsUrl = new URL(env.ACCOUNTS_ISSUER).origin;
+  const hasBottomNav = BUILT_NAV.length > 1;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col pt-[env(safe-area-inset-top)]">
-      <header className="flex h-14 items-center justify-between px-5">
-        <span className="text-lg font-bold tracking-tight">Spurs Pay</span>
-        <div className="flex items-center gap-3">
-          <span className="max-w-32 truncate text-sm text-muted">{user.name ?? user.email}</span>
-          <form action="/auth/logout" method="post">
-            <Button type="submit" variant="ghost" className="h-10 px-3 text-sm text-primary">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </header>
-
-      {!user.emailVerified && (
-        <div role="status" className="mx-5 mb-2 rounded-control bg-primary-soft px-4 py-3 text-sm">
-          Verify your email to send money.
-        </div>
-      )}
-
-      <main className="flex-1 px-5 pb-28">{children}</main>
-
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-md justify-around border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+    <ShellFrame initialCollapsed={collapsed}>
+      <a
+        href="#main"
+        className="type-body-sm sr-only font-semibold focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-primary"
       >
-        {NAV.map((item) =>
-          item.ready ? (
-            <Link
-              key={item.label}
-              href={item.href}
-              aria-current="page"
-              className="flex h-16 flex-1 items-center justify-center text-sm font-semibold text-primary"
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span
-              key={item.label}
-              aria-disabled="true"
-              className={cn(
-                'flex h-16 flex-1 items-center justify-center text-sm text-muted opacity-60',
-              )}
-            >
-              {item.label}
-            </span>
-          ),
+        Skip to content
+      </a>
+
+      <Sidebar
+        account={{
+          label: user.name ?? user.email ?? 'Your account',
+          email: user.name ? user.email : undefined,
+          seed: user.sub,
+        }}
+      />
+
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col pt-[env(safe-area-inset-top)] md:max-w-[560px] md:pt-8 lg:max-w-[904px]">
+        <header className="flex h-14 items-center px-5 md:hidden">
+          <span className="text-lg font-bold tracking-tight">Spurs Pay</span>
+        </header>
+
+        {!user.emailVerified && (
+          <div className="mb-2 px-5 md:px-6">
+            <Banner tone="info" action={<a href={accountsUrl}>Verify</a>}>
+              Verify your email to send money.
+            </Banner>
+          </div>
         )}
-      </nav>
-    </div>
+
+        <main id="main" className={cn('flex-1 px-5 md:px-6', hasBottomNav ? 'pb-28 md:pb-8' : 'pb-8')}>
+          {children}
+        </main>
+      </div>
+
+      <BottomNav />
+    </ShellFrame>
   );
 }

@@ -8,6 +8,7 @@ export interface ListRowProps {
   subtitle?: ReactNode;
   trailing?: ReactNode;
   href?: string;
+  external?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -23,6 +24,7 @@ export function ListRow({
   subtitle,
   trailing,
   href,
+  external,
   onClick,
   className,
 }: ListRowProps) {
@@ -39,7 +41,11 @@ export function ListRow({
 
   if (href) {
     return (
-      <Link href={href} className={cn(base, interactive, className)}>
+      <Link
+        href={href}
+        className={cn(base, interactive, className)}
+        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
         {content}
       </Link>
     );

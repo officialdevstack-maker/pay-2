@@ -7,7 +7,7 @@ The only source for colour, radius and font is `src/app/globals.css`. Components
 
 ## 1. Tokens to add to `globals.css`
 
-The current file has the core palette. Phase 9 adds soft semantic fills, a scrim, avatar tints, and corrects the radius scale to match design-principles (control 12, card 16, sheet 24).
+The current file has the core palette. Phase 9 adds soft semantic fills and a scrim, and corrects the radius scale to match design-principles (control 12, card 16, sheet 24).
 
 ```css
 /* src/app/globals.css: add inside :root */
@@ -16,12 +16,6 @@ The current file has the core palette. Phase 9 adds soft semantic fills, a scrim
 --danger-soft: #fbe4e4;
 --scrim: rgb(9 17 30 / 0.5);
 
---avatar-1-bg: #d9efee; --avatar-1-fg: #0b5555; /* teal */
---avatar-2-bg: #dde8fb; --avatar-2-fg: #1f4a99; /* blue */
---avatar-3-bg: #fbeed6; --avatar-3-fg: #8a5200; /* amber */
---avatar-4-bg: #ebe3f8; --avatar-4-fg: #5a3a99; /* violet */
---avatar-5-bg: #f8e1e6; --avatar-5-fg: #9a2f48; /* rose */
---avatar-6-bg: #e3e8ef; --avatar-6-fg: #3b4659; /* slate */
 ```
 
 ```css
@@ -31,12 +25,6 @@ The current file has the core palette. Phase 9 adds soft semantic fills, a scrim
 --danger-soft: #3a1616;
 --scrim: rgb(0 0 0 / 0.6);
 
---avatar-1-bg: #11332f; --avatar-1-fg: #7fe0d6;
---avatar-2-bg: #172a4d; --avatar-2-fg: #9dbdf5;
---avatar-3-bg: #3a2a0c; --avatar-3-fg: #f5b955;
---avatar-4-bg: #2a2147; --avatar-4-fg: #c3adf0;
---avatar-5-bg: #40202a; --avatar-5-fg: #f2a3b5;
---avatar-6-bg: #1b2538; --avatar-6-fg: #b4c0d4;
 ```
 
 ```css
@@ -45,10 +33,6 @@ The current file has the core palette. Phase 9 adds soft semantic fills, a scrim
 --color-warning-soft: var(--warning-soft);
 --color-danger-soft: var(--danger-soft);
 --color-scrim: var(--scrim);
---color-avatar-1-bg: var(--avatar-1-bg);
---color-avatar-1-fg: var(--avatar-1-fg);
-/* repeat for avatar-2 to avatar-6 */
-
 --radius-control: 0.75rem; /* 12 (was 0.875rem) */
 --radius-card: 1rem;       /* 16 (was 1.25rem) */
 --radius-sheet: 1.5rem;    /* 24 */
@@ -85,9 +69,9 @@ One family: Figtree Variable (`font-sans`). Weights 400, 500, 600, 700 only.
 
 | Role | Size / line | Weight | Tracking | Use |
 | --- | --- | --- | --- | --- |
-| `amount-xl` | 48 / 52 | 700 | −0.02em | Keypad amount, receipt amount |
-| `amount-lg` | 40 / 44 | 700 | −0.02em | Home balance |
-| `amount-md` | 20 / 24 | 600 | −0.01em | Review amount, list amounts |
+| `amount-xl` | 48 / 52 | 700 | −0.02em | Checkout and receipt amount |
+| `amount-lg` | 40 / 44 | 700 | −0.02em | Reserved for a prominent payment amount |
+| `amount-md` | 20 / 24 | 600 | −0.01em | Checkout summary and list amounts |
 | `title` | 24 / 30 | 700 | −0.01em | Screen title |
 | `heading` | 18 / 24 | 600 | 0 | Section heading |
 | `body` | 16 / 24 | 400 | 0 | Default text, input text |
@@ -114,7 +98,7 @@ Tailwind mapping: define the roles as utilities in `globals.css` (`@utility text
 | Between sections | 24 |
 | Between a heading and its content | 12 |
 | List row vertical padding | 12 (row height at least 56) |
-| Inside a card | 16 for lists, 24 for the balance panel |
+| Inside a card | 16 for lists and other card content |
 | Primary action bottom offset | 16 above safe area |
 
 Touch targets are 44 × 44 px at minimum. Row height 56 px. Buttons: `md` 44, `lg` 56.
@@ -142,7 +126,7 @@ Surfaces are flat and use a 1 px `border`. Shadows exist only on floating layers
 
 One set, one stroke weight. Use `lucide-react` at 1.75 stroke, sizes 20 (inline), 24 (nav, buttons). Import icons individually. Icons never carry meaning alone: pair with text or an `aria-label`.
 
-Needed first: `Home`, `Send`, `Clock` (activity), `Settings`, `Plus`, `Copy`, `Check`, `ChevronRight`, `ChevronLeft`, `X`, `Eye`, `EyeOff`, `Delete` (keypad backspace), `Search`, `AlertCircle`, `Info`, `WifiOff`, `Share`.
+Needed first: `Home`, `CreditCard` (payment methods), `Clock` (activity), `Settings`, `Plus`, `Copy`, `Check`, `ChevronRight`, `ChevronLeft`, `X`, `Info`, `WifiOff`, `Share`.
 
 ## 8. Motion
 
@@ -183,24 +167,25 @@ File: `src/components/ui/input.tsx`
 - Height 52, `rounded-control`, `bg-sunken`, 1 px transparent border, 16 px text.
 - Focus: border and ring `primary`. Error: border `danger`, message below in `danger` `body-sm` with `role="alert"`.
 - Props: `label` (required, always visible above the field), `hint`, `error`, `prefix`, `suffix`.
-- `AmountInput` variant: `inputMode="decimal"`, `₦` prefix, accepts commas and `₦` on paste, strips on blur.
+- Checkout amounts are server-owned and displayed read-only. Do not add a customer amount input to checkout.
 - Label is linked with `htmlFor`. Error is linked with `aria-describedby`. No placeholder-as-label.
 
 ### ListRow and ListGroup
 
 Files: `src/components/ui/list-row.tsx`, `src/components/ui/list-group.tsx`
 
-- `ListGroup`: one `Card` with `divide-y divide-border` and `overflow-hidden`. This is the container for people, activity and settings.
+- `ListGroup`: one `Card` with `divide-y divide-border` and `overflow-hidden`. This is the container for payment methods, activity and settings.
 - `ListRow`: min height 56, padding 12 × 16, grid: leading (avatar or icon) | text (primary 16/600, secondary 14 muted) | trailing (amount or chevron).
 - Interactive rows render as `<a>` or `<button>`, with `active:bg-sunken` and a visible focus ring inset.
 - Trailing amount is right-aligned, `amount-md`, with sign and colour per section 2. A trailing `caption` can show status.
 
-### Avatar
+### Avatar (retained shared component)
 
 File: `src/components/ui/avatar.tsx`
 
 - Sizes 32, 40, 48. Initials (max two letters) in 600 weight, on a tint.
-- Tint index is `hash(tag ?? name) % 6`, computed with a small deterministic hash (sum of char codes). Never `Math.random`.
+- Retained for shared/legacy UI; not used for Pay payment methods or checkout.
+- Tint index is deterministic from the displayed name. Never `Math.random`.
 - `aria-hidden` when the name is printed beside it.
 
 ### Sheet
@@ -211,13 +196,13 @@ File: `src/components/ui/sheet.tsx`
 - Desktop (768 and up): centred dialog, 420 wide, `rounded-sheet`.
 - Built on the native `<dialog>` element, so focus trap, Escape and inert background come free. Return focus to the trigger on close.
 - Title is required (`aria-labelledby`). Close button 44 × 44 top right.
-- Used for: PIN entry, share options.
+- Used for: short checkout actions and share options. Wallet PIN entry is not a Pay sheet.
 
 ### Dialog
 
 File: `src/components/ui/dialog.tsx`
 
-- Same shell as Sheet but always centred, 360 wide, for short blocking messages with up to two actions (`PIN_NOT_SET`).
+- Same shell as Sheet but always centred, 360 wide, for short blocking messages with up to two actions.
 - Primary action right (or on top on mobile), secondary as `ghost`.
 
 ### Toast
@@ -234,7 +219,7 @@ File: `src/components/ui/toast.tsx`
 File: `src/components/ui/skeleton.tsx`
 
 - `bg-sunken rounded-control`, opacity pulse 1.4 s between 1 and 0.55. No gradient sweep.
-- Compose skeletons to match the real layout: `BalanceSkeleton`, `ListRowSkeleton`.
+- Compose skeletons to match the real layout: `ListRowSkeleton`.
 
 ### StatusBadge
 
@@ -265,19 +250,16 @@ File: `src/components/ui/banner.tsx`
 
 File: `src/components/ui/amount-display.tsx`
 
-- Props: `kobo: bigint`, `size: 'xl' | 'lg' | 'md'`, `sign?: 'in' | 'out' | 'none'`, `hideZeroKobo?`, `hidden?`.
+- Props: `kobo: bigint`, `size: 'xl' | 'lg' | 'md'`, `sign?: 'in' | 'out' | 'none'`, `hideZeroKobo?`.
 - Renders `formatNaira` output with the `.amount` class and the sign rules from section 2.
-- `hidden` shows `••••` and keeps width stable with `min-w` so the layout does not jump.
 - Adds an `aria-label` with the spoken form (see content-guidelines section 5).
 - The only place that renders an amount. No component calls `formatNaira` directly in JSX.
 
-### Keypad and PinDots (send flow)
+### Keypad and PinDots (legacy transfer-flow components)
 
 Files: `src/components/pay/keypad.tsx`, `src/components/pay/pin-dots.tsx`
 
-- Keypad: 3 × 4 grid, keys 64 tall, `body-strong` 24, no borders, `active:bg-sunken`. Backspace key has an `aria-label`. Hardware keyboard digits and Backspace work.
-- PinDots: 4 to 6 dots, 14 px, filled `foreground` when entered, `border` when empty. Error shakes? No. Error clears the dots and shows the message.
-- Neither stores the value outside component state. Clear on unmount.
+These legacy components are not part of Pay checkout. Wallet may reuse them only after a separate product and security review; do not collect a Wallet PIN in Pay.
 
 ### Segmented control
 
@@ -289,10 +271,10 @@ File: `src/components/ui/segmented.tsx`
 
 File: `src/app/(app)/layout.tsx`
 
-- Mobile: header 56, bottom nav 64 plus safe area, content `max-w-md`, `px-5`.
-- Desktop (768 and up): left rail 240 (`Home`, `Pay`, `Activity`, `Settings` with icon and label), content column 560 centred in the remaining space, `pt-8`. The bottom nav is hidden.
-- Nav items appear only if their route exists. No disabled items.
-- Sign out moves to Settings. The header shows the wordmark and, on mobile, nothing else.
+- Mobile: header 56 with the wordmark, bottom nav 64 plus safe area, content `max-w-md`, `px-5`.
+- Desktop (768 and up): left rail, expanded 240 or collapsed 72 (icons only, labels in `title` and screen-reader text). The toggle sits at the top of the rail. State is stored in the `spurs_pay_nav` cookie and read on the server. Content column 560 (904 with the side column at 1024), `pt-8`. The bottom nav is hidden.
+- Rail footer: account link to Settings, then Sign out.
+- Navigation labels: Home, Payment methods, Activity, Settings. Nav items appear only if their route exists. No disabled items. Checkout is opened by a first-party product, not from navigation.
 
 ## 11. Dark mode
 

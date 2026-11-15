@@ -30,22 +30,22 @@ Review each screen at 360 px, 430 px and 1280 px wide, in light and dark.
 ## 3. States
 
 - [ ] Loading uses a skeleton that matches the final layout
-- [ ] Empty state says what belongs here and offers the next action
+- [ ] Empty state says what belongs here and offers the next action when one is appropriate
 - [ ] Error state uses the catalogue and offers retry
 - [ ] Offline shows cached data where it exists and disables money actions with a reason
 - [ ] Partial failure (next page) keeps the list and shows a retry row
-- [ ] Blocked state (suspended, wallet unavailable, email unverified) explains and offers the fix
+- [ ] Blocked state (suspended, Wallet unavailable, email unverified) explains and offers the fix
 - [ ] Success is one clear confirmation, then the next action
-- [ ] Unknown outcome never shows failure and never offers "send again"
+- [ ] Unknown outcome never shows failure and never offers "pay again"
 
 ## 4. Money safety
 
 - [ ] The confirm button disables and shows progress on the first press
-- [ ] The `Idempotency-Key` is created once per transfer attempt and reused on retry, regenerated when recipient, amount or note change
+- [ ] The `Idempotency-Key` is created once per checkout attempt and reused on retry; a new session/payment intent gets a new key
 - [ ] A 200 (replayed) response is treated as success and shows the same receipt
-- [ ] The balance changes only from server data, never optimistically on funding
-- [ ] Amount parsing uses `parseNairaToKobo`. No `parseFloat`, no `Number` on amounts
-- [ ] The PIN is never stored, logged, put in a URL or sent to analytics, and is cleared when its sheet closes
+- [ ] Checkout amount and final status are server-owned; never trust a client-supplied price or success
+- [ ] Checkout amount comes from the authenticated server session; client input cannot change the price
+- [ ] Wallet PIN remains in Wallet's approved authorization flow; Pay never stores or logs it
 - [ ] Limit values come from config or an API, not from component code
 
 ## 5. Accessibility
@@ -79,8 +79,8 @@ Review each screen at 360 px, 430 px and 1280 px wide, in light and dark.
 - [ ] Safe-area insets are applied to the header, bottom nav and bottom-fixed actions
 - [ ] The primary action is reachable with a thumb on flow steps
 - [ ] Inputs are 16 px or larger, with the right `inputMode` and `autocomplete`
-- [ ] Digits, Enter, Escape and Backspace work on desktop keyboards in the keypad and sheets
-- [ ] Layout does not jump when the balance is hidden or data loads
+- [ ] Enter and Escape work on desktop keyboards in checkout and sheets
+- [ ] Layout does not jump when data loads
 - [ ] Tested on a mid-range Android profile with throttled network (Chrome DevTools, "Slow 4G", 4x CPU slowdown)
 
 ## 8. Performance

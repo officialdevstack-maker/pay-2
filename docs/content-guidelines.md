@@ -1,7 +1,9 @@
 <!-- docs/content-guidelines.md -->
 # Content guidelines
 
-Every word a user reads follows these rules, including errors, notifications, empty states and receipts. Server messages are already written (see the error catalogue in [product-spec.md](product-spec.md)). The UI shows them as they are.
+Every word a user reads follows these rules, including errors, notifications, empty states and receipts. Existing server messages are in the error catalogue in [product-spec.md](product-spec.md); checkout-specific codes and messages must be defined before the checkout UI is built. The UI shows server messages as they are.
+
+This guide covers Pay checkout and payment-method screens. Legacy P2P copy in retained transfer code is not Pay UI copy; review it separately before Wallet reuses it.
 
 ## 1. Voice
 
@@ -10,21 +12,21 @@ Plain, calm, specific. Written for someone in a hurry who is handling money.
 - Say what happened, then what to do next.
 - Short sentences. One idea each.
 - No exclamation marks, no emoji, no jokes.
-- Never blame the user. "The PIN is incorrect." not "You entered the wrong PIN."
-- Never promise more than the system guarantees. "Usually within a few minutes" is honest. "Instant" is only for person-to-person transfers.
-- Nigerian English spelling and conventions. "Naira", "bank transfer", "airtime".
+- Never blame the user. "This payment method isn't available." not "You chose an invalid method."
+- Never promise more than the system guarantees. "Usually within a few minutes" is honest. A payment is complete only after the server confirms it.
+- Nigerian English spelling and conventions. "Naira", "bank transfer".
 
 ## 2. Style rules
 
 | Rule | Do | Don't |
 | --- | --- | --- |
 | Sentence case | Add money | Add Money |
-| Verbs on buttons | Send ₦1,200.00 | Submit, OK, Continue to next step |
-| Name the thing | Set your PIN | Set it up |
-| Same word, same thing | "Tag" everywhere | Tag, handle, username |
-| Active voice | We could not find that tag. | That tag could not be found. |
+| Verbs on buttons | Pay ₦12,500.00 | Submit, OK, Continue to next step |
+| Name the thing | Add payment method | Set it up |
+| Same word, same thing | Payment method everywhere | Source, instrument |
+| Active voice | We could not complete the payment. | The payment could not be completed. |
 | Numerals | 5 wrong attempts | five wrong attempts |
-| No filler | Add money to get started. | Welcome! Let's get you started on your journey. |
+| No filler | No payments yet. | Welcome! Let's get you started on your journey. |
 | No arrows or "→" in labels | Continue | Continue → |
 | Plain punctuation | Full stops on sentences, none on labels | Ellipses for effect |
 | Avoid | "Oops", "Whoops", "Uh-oh", "Seamless", "Effortless", "Supercharge" | |
@@ -35,28 +37,28 @@ Pick one word and keep it.
 
 | Use | Not |
 | --- | --- |
-| Send, sent | Transfer (as a verb for P2P), pay out |
-| Add money | Fund, top up, deposit (in UI) |
-| Spurs Pay account | Virtual account, funding account, wallet account |
-| Balance | Available funds (except "Available" next to the amount) |
-| Reference | Transaction ID, ref no. |
-| Tag, `@tag` | Username, handle |
-| PIN, transaction PIN | Passcode, password |
+| Payment, paid | Transfer (for a checkout payment), transaction (in customer copy) |
+| Payment method | Source, instrument |
+| Spurs Wallet | Pay wallet, Pay balance |
+| Bank transfer | Deposit, bank funding account |
+| Card •••• 5438 | Full card number, PAN |
+| Payment reference | Transaction ID, ref no. |
 | Sign in, sign out | Log in, log out |
-| Recipient (when formal), person's name (when possible) | Beneficiary (internal term only) |
 | Receipt | Proof of payment |
 
-Internal terms never shown to users: beneficiary, ledger, idempotency, kobo, provider, suspense, webhook, step-up.
+Use "Add money" only in the Wallet customer experience. Pay's payment methods and checkout do not expose an Add money screen.
+
+Internal terms never shown to users: ledger, idempotency, kobo, provider, suspense, webhook, step-up, merchant account.
 
 The provider is never named, hinted at, or described. See product-spec section 11.
 
 ## 4. Amounts
 
 - Always use `formatNaira`. The symbol is `₦`, never "NGN" or "N" in the UI.
-- Show kobo. `₦1,200.00`, not `₦1,200`. The exception is `hideZeroKobo` in notification titles ("You sent ₦1,200").
-- Sign: money in has `+`, money out has `−` (U+2212). Neutral amounts (balance, review) have no sign.
+- Show kobo. `₦1,200.00`, not `₦1,200`. The exception is `hideZeroKobo` in notification titles ("Payment of ₦1,200 confirmed").
+- Sign: money in has `+`, money out has `−` (U+2212). Neutral checkout amounts have no sign.
 - Comma thousands, dot decimals.
-- Buttons that move money repeat the amount: "Send ₦1,200.00".
+- Checkout confirmation repeats the amount: "Pay ₦12,500.00".
 - Never write an amount in a sentence without the symbol.
 
 ## 5. Spoken amounts (screen readers)
@@ -85,17 +87,14 @@ Implementation: `src/lib/money.ts` gets `spokenNaira(kobo, { sign })`, covered b
 
 | Place | Label |
 | --- | --- |
-| Home primary | Send money |
-| Home secondary | Add money |
-| Recipient step | Continue |
-| Amount step | Review |
-| Review | Send ₦1,200.00 |
-| PIN sheet confirm | Confirm |
-| Result | Done, View receipt, Share receipt |
+| Home primary | Add payment method |
+| Payment methods | Add card |
+| Checkout confirm | Pay ₦12,500.00 |
+| Payment result | Done, View receipt, Return to Spurs Store |
 | Receipt | Share receipt |
 | Settings | Sign out |
 | After an error | Try again |
-| Copy rows | Copy (aria-label "Copy account number") |
+| Copy reference | Copy (aria-label "Copy payment reference") |
 
 Links say where they go: "Manage in Spurs Accounts", not "Click here".
 
@@ -105,9 +104,10 @@ Show `error.message` from the API. The UI never rewrites it and never shows a co
 
 | Code | Server message | Added by the UI |
 | --- | --- | --- |
-| `INSUFFICIENT_FUNDS` | Insufficient balance. | "You have ₦12,500.00." and an Add money link |
-| `TRANSFER_LIMIT_EXCEEDED` | This transfer is above your per-transfer limit. | The limit amount from config |
-| `PIN_LOCKED` | PIN attempts are temporarily locked. Try again later. | "Try again in 14 minutes." |
+| `INSUFFICIENT_FUNDS` | Insufficient balance. | Offer another eligible payment method; do not link to Pay Add money |
+| Checkout session expired | Contract code/message to define | Explain that checkout expired and provide a safe return to the requesting Spurs product |
+| Payment method unavailable | Contract code/message to define | Offer another eligible method |
+| Card authentication/decline | Provider-neutral mapped message | Offer a safe retry or another method |
 | `RATE_LIMITED` | Too many requests. Try again shortly. | Countdown from `retryAfterSeconds` |
 | `INTERNAL` | Something went wrong on our side. Try again. | Request id in small text |
 
@@ -116,8 +116,8 @@ UI-only messages (not from the server):
 | Situation | Copy |
 | --- | --- |
 | No connection | You appear to be offline. |
-| Timeout | We couldn't reach Spurs Pay. |
-| Unknown outcome | Confirming your transfer. This can take a moment. |
+| Timeout | We couldn't confirm this payment yet. |
+| Unknown outcome | We couldn't confirm this payment yet. |
 | Still unknown after retries | We are still checking. You can leave this screen and check Activity. |
 
 Error placement: inline beside the field it belongs to, `role="alert"`. A toast is never the only place an error appears.
@@ -128,26 +128,20 @@ One sentence that says what belongs here and what to do.
 
 | Screen | Copy |
 | --- | --- |
-| Home activity | No activity yet. Add money to get started. |
-| Activity (All) | No activity yet. |
-| Activity (Sent) | You have not sent any money yet. |
-| Activity (Received) | You have not received any money yet. |
-| Activity (Added money) | You have not added any money yet. |
-| Recent people | Hidden when empty |
-| Search no match | No one matches "ada". |
+| Home payments | No payments yet. |
+| Activity | No payments yet. |
+| Payment methods | No payment methods yet. |
 
 ## 10. Notifications
 
-Titles are the fact. Bodies are the context. Created by `notifyTransfer` and the funding handler.
+Titles are the fact. Bodies are the context. Pay notifications are created from server-confirmed checkout state.
 
 | Type | Title | Body |
 | --- | --- | --- |
-| `transfer.sent` | You sent ₦1,200 | To Ada Okafor |
-| `transfer.received` | You received ₦1,200 | From Tunde Bello |
-| `funding.received` | ₦12,500 added to your balance | Bank transfer received |
-| Fallback name | | From a Spurs Pay user |
+| Payment completed | Payment of ₦12,500 confirmed | Spurs Store |
+| Payment reversed | Payment of ₦12,500 reversed | Spurs Store |
 
-Rules: no emoji, no "Great news", no exclamation marks. Always carry the `SPY_` reference. Email subjects use the title text.
+Rules: no emoji, no "Great news", no exclamation marks. Carry our `SPY_` reference in the receipt. Wallet funding notifications belong to Wallet. Email subjects use the title text.
 
 ## 11. Setup and onboarding
 
@@ -155,17 +149,15 @@ Rules: no emoji, no "Great news", no exclamation marks. Always carry the `SPY_` 
 | --- | --- |
 | Checklist heading | Finish setting up |
 | Email | Verify your email |
-| Tag | Choose your @tag |
-| PIN | Set your transaction PIN |
-| Why before sending | Set up your tag and PIN to send money. |
-| Tag permanence | Your tag is permanent. Check it is right. |
-| Step-up | Confirm it is you to change your PIN. |
+| Payment methods | Add payment method |
+
+Do not show Pay tag or PIN setup. Wallet owns Wallet PIN setup, recovery, and funding copy.
 
 ## 12. Accessibility copy
 
-- Every icon-only button has an `aria-label` in the same vocabulary ("Hide balance", "Delete last digit", "Close").
+- Every icon-only button has an `aria-label` in the same vocabulary ("Close", "Copy payment reference").
 - Link and button text makes sense alone.
-- Status changes announce through `aria-live`: "PIN is incorrect", "Copied", "Transfer confirmed".
+- Status changes announce through `aria-live`: "Copied", "Payment confirmed".
 - Form labels are visible text, never placeholder only.
 - Language attribute is `en-NG` (already set in `layout.tsx`).
 

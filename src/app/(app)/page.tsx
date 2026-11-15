@@ -1,31 +1,47 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { formatNaira } from '@/lib/money';
+import Link from 'next/link';
+import { AsideCard } from '@/components/home/aside-card';
+import { PaySearch } from '@/components/home/pay-search';
+import { PeopleGrid } from '@/components/home/people-grid';
+import { QuickActions } from '@/components/home/quick-actions';
+import { RecentActivity } from '@/components/home/recent-activity';
+import { SetupChecklist, type SetupItem } from '@/components/home/setup-checklist';
+import { env } from '@/env';
+import { getHomeData } from '@/modules/dashboard';
+import { requireUser } from '@/modules/identity';
 
-const ACTIONS = ['Send', 'Request', 'Scan', 'Add money'] as const;
+export default async function HomePage() {
+  const user = await requireUser();
+  const data = await getHomeData(user.id);
+  const accountsUrl = new URL(env.ACCOUNTS_ISSUER).origin;
 
-export default function HomePage() {
+  const setup: SetupItem[] = [
+    ...(user.emailVerified ? [] : [{ label: 'Verify your email', href: accountsUrl }]),
+    ...(data.tag ? [] : [{ label: 'Choose your @tag', href: '/settings/tag' }]),
+    ...(data.pinSet ? [] : [{ label: 'Set your transaction PIN', href: '/settings/pin' }]),
+  ];
+
+  const sendHref = setup.find((item) => item.href.startsWith('/'))?.href ?? '/pay';
+
   return (
-    <div className="space-y-6 pt-2">
-      <Card className="p-6">
-        <p className="text-sm text-muted">Balance</p>
-        <p className="amount mt-1 text-4xl font-bold">{formatNaira(0n)}</p>
-      </Card>
+    <div className="pt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+      <h1 className="sr-only">Home</h1>
 
-      <div className="grid grid-cols-4 gap-3">
-        {ACTIONS.map((action) => (
-          <Button key={action} variant="secondary" disabled className="h-16 flex-col px-1 text-xs">
-            {action}
-          </Button>
-        ))}
+      <div className="space-y-6">
+        <PaySearch />
+        <SetupChecklist items={setup} />
+        <QuickActions sendHref={sendHref} setupIncomplete={setup.length > 0} />
+        <PeopleGrid people={data.people} />
+        <RecentActivity items={data.activity} />
       </div>
 
-      <section aria-labelledby="activity-heading">
-        <h2 id="activity-heading" className="mb-3 text-base font-semibold">
-          Recent activity
-        </h2>
-        <Card className="p-6 text-sm text-muted">No activity yet. Add money to get started.</Card>
-      </section>
+      <aside aria-label="About your account" className="hidden space-y-4 lg:block">
+        <AsideCard title="Add money from any bank app" action={<Link href="/add-money">Add money</Link>}>
+          Transfer to your Spurs Pay account. It is ready to send once the transfer arrives.
+        </AsideCard>
+        <AsideCard title="Your details" action={<a href={accountsUrl}>Manage in Spurs Accounts</a>}>
+          Your name and email come from your Spurs account.
+        </AsideCard>
+      </aside>
     </div>
   );
 }

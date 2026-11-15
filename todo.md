@@ -1,10 +1,10 @@
 # Spurs Pay: Build TODO
 
-Spurs Pay is a Google Pay-style payments app: a **full-stack Next.js app** that signs users in with **Spurs Accounts** (OIDC) and moves money through a **hidden payment provider**. **Spurs Wallet is a separate service** that consumes Spurs Pay (over a service API) and Spurs Accounts auth. Pay's module boundaries are therefore designed to become API boundaries.
+Spurs Pay is the payment-methods and hosted-checkout service for **Spurs-owned products only** in the first release. It signs customers in with **Spurs Accounts** (OIDC) and moves money through a hidden payment provider. **Spurs Wallet is a separate service** that owns Wallet balances and its customer UI; it uses Pay's authenticated service API to fund Wallet. Pay does not own customer balances or expose P2P transfer screens.
 
 Tick items as they land. Do not start a phase until the previous phase's "Done when" is true.
 
-**Status:** Phases 1, 3, 4, 5, 6 code is in. Phase 2 auth has been implemented, but the private auth package is not available in this checkout, so typecheck cannot pass until package access is restored. Phase 7 transfer and profile APIs are implemented; database-backed tests still need a disposable Postgres run. Items marked `(partial)` or `(stub)` are not fully done.
+**Status:** The existing auth, ledger, provider, funding, Wallet, and P2P modules remain in the repository. P2P routes and the `product='pay'` customer wallet are legacy implementation, not the new Pay product scope; retain them for review/reuse and do not expand their UI. Checkout, payment methods, and Wallet funding through the service API are not implemented. Items marked `(partial)` or `(stub)` are not fully done.
 
 ---
 
@@ -17,6 +17,7 @@ Tick items as they land. Do not start a phase until the previous phase's "Done w
 - [x] Every transaction balances: sum of debits equals sum of credits. (App validation + deferred DB constraint triggers.)
 - [x] Every money-changing write needs an **idempotency key**. Replays return the original result.
 - [x] Balances change only inside the ledger module, inside a DB transaction.
+- [ ] Pay must not create or display a customer balance. Spurs Wallet is the sole owner of Wallet balances; cross-service debits require the approved Wallet authorization contract.
 
 ### Provider secrecy (users must never learn who the provider is)
 - [x] Provider code lives only in `src/server/providers/<driver>/` and is imported only through the `PaymentProvider` interface.
@@ -24,6 +25,7 @@ Tick items as they land. Do not start a phase until the previous phase's "Done w
 - [ ] No provider name in: client bundles, URLs, route names, response bodies, error messages, emails, receipts, references, DB enum values shown to users, page titles, or public env vars. (partial: holds for the mock; re-verify with the real adapter, including the bank name it returns)
 - [x] Provider errors are **mapped** to our own error codes and messages. Raw provider messages go to server logs only.
 - [x] References we create use our prefix (`SPY_`), never the provider's format. Provider references stay in internal columns and are never serialised to the client.
+- [ ] Card entry is tokenized/embedded; raw PAN and CVV never reach Pay. Resolve the provider-brand conflict before enabling card checkout.
 - [x] Webhook route is neutral (`/api/hooks/payments/[token]`), with an unguessable path token plus signature verification.
 - [x] CI check: build, then grep `.next/static` and the HTML for provider names, failing on any match.
 - [ ] Swapping the provider must require **zero changes outside** `src/server/providers/`, one env value (`PAYMENTS_DRIVER`), and credentials. (Only the mock exists; prove it with the first real adapter.)
@@ -31,9 +33,10 @@ Tick items as they land. Do not start a phase until the previous phase's "Done w
 ### Reusability (Wallet is a separate service that calls Pay)
 - [x] Domain logic lives in `src/modules/*` with **no imports from `app/` or React**. UI calls modules; modules never call UI.
 - [ ] `ledger`, `identity`, `payments`, `notifications` are written as if they were separate packages (own `index.ts` public API, no deep imports from outside). (identity is still a stub)
-- [x] Wallets carry a `product` column (`pay` now, `wallet` for the Wallet service) so both share one ledger.
+- [x] Wallets carry a `product` column; the current `pay` customer wallet is legacy and the Wallet service uses `wallet`.
 - [x] PINs and limits are keyed by `product`, so Wallet gets its own without touching Pay's code.
 - [x] Wallet service must never share Pay's database; it only talks to Pay's service API (see Phase 6b).
+- [ ] Pay may not read or write Wallet's database. Wallet is authoritative for its balance and authorizes any Wallet-funded checkout.
 
 ### Code conventions
 - [x] TypeScript strict, `noUncheckedIndexedAccess`, ESM, `@/` alias to `src/`.
@@ -62,7 +65,8 @@ Tick items as they land. Do not start a phase until the previous phase's "Done w
 src/
   app/                      # routes, layouts, server actions (thin)
     (auth)/                 # login callback, logout
-    (app)/                  # authenticated shell: home, send, request, activity, settings
+    (app)/                  # authenticated shell: home, payment methods, activity, settings
+      checkout/[id]/        # hosted checkout session
     api/
       auth/[...]/           # OIDC start + callback (BFF)
       hooks/payments/[token]/  # neutral provider webhook entry
@@ -71,9 +75,9 @@ src/
   config/                   # fees, limits (single source of truth)
   modules/
     identity/               # session, Accounts client, user status checks
-    ledger/                 # accounts, entries, balances, transfers (pure domain)
-    wallet/                 # wallet lifecycle, limits, PIN
-    payments/               # funding, withdrawals, reconciliation (uses providers)
+    ledger/                 # accounts, entries, payment postings (pure domain)
+    wallet/                 # legacy Pay wallet code; Wallet product support pending service contract
+    payments/               # Wallet funding, checkout, reconciliation (uses providers)
     notifications/
   server/
     providers/
@@ -113,7 +117,8 @@ src/
 - [x] **Status guard**: money actions call Accounts `/api/internal/users/{id}` with a `users:read` service token, reject if `suspendedAt` is set; cached for 45s
 - [x] Require `email_verified` before current send/withdraw actions; show a clear "verify your email" error
 - [ ] Step-up: helper requests `prompt=login&max_age=300`; consumers will be added with change-PIN and add-bank flows
-- [x] Map `sub` (Accounts user id) to `pay_users` on first login and call `ensureWallet`
+- [x] Map `sub` (Accounts user id) to `pay_users` on first login
+- [ ] Stop creating `product='pay'` customer wallets on first login after legacy balances and funding records are reconciled; do not delete data without a migration plan
 
 **Done when:** the Accounts client is registered and the login/logout smoke test passes; DB-gated tests cover login, logout, expiry, concurrent refresh and suspension, and no token appears in any client response.
 
@@ -121,6 +126,7 @@ src/
 - [x] Schema: `ledger_accounts`, `transactions`, `ledger_entries`, `idempotency_keys` (+ `wallets` with `product`, `currency`, cached `balance`, `version`)
 - [x] Ledger service API: `post(transaction, entries[])` validates balance, currency and idempotency, inside one DB transaction
 - [x] System accounts: `provider_clearing`, `fees`, `suspense`, `settlement`
+- [ ] Define payment posting entries from the selected payment source to an internal Spurs product merchant account, including linked reversals
 - [x] Balance rules: wallets cannot go negative (DB `CHECK` as the last line of defence)
 - [x] Locking: lock accounts **in ascending id order** to prevent deadlocks
 - [x] Reversal helper (creates mirrored entries linked to the original)
@@ -131,6 +137,7 @@ src/
 
 ### Phase 4: Provider abstraction
 - [x] Define `PaymentProvider`: `listBanks`, `resolveAccount` (name enquiry), `createFundingAccount` (per-user virtual account), `initiateTransfer`, `getTransferStatus`, `verifyWebhook`, `parseWebhook` (to normalised events)
+- [ ] Extend the provider contract for tokenized card checkout and card top-up without exposing raw card data or provider branding
 - [x] Normalised event types: `funding.received`, `payout.succeeded`, `payout.failed`, `payout.reversed`
 - [x] Error mapper: provider error to `AppError` with our codes (`FUNDING_UNAVAILABLE`, `PAYOUT_FAILED`, `ACCOUNT_NOT_FOUND`, ...)
 - [ ] First adapter in `providers/<driver>/` (needs a vendor choice and credentials); plus a **`mock` driver** for tests and local dev (mock done, real adapter not)
@@ -143,80 +150,83 @@ src/
 - [ ] Verified on mock
 - [ ] Leak check passes with the real adapter included
 
-### Phase 5: Funding (add money)
-- [x] Per-user dedicated funding account details shown as **"Spurs Pay account"** (no provider branding in copy or UI)
-- [x] On `funding.received`: credit wallet via the ledger, keyed by the provider event id (idempotent), notify the user. Unmatched deposits go to `suspense`.
-- [x] Card funding only if it can be done without exposing the provider's brand; otherwise defer and document the trade-off (**deferred**: v1 is bank-transfer only; `FEES.cardFundingBps` unused)
-- [ ] Pending, success and failed states in the UI; no balance change until the webhook is processed (partial: no balance change before the webhook and credited deposits are listed; a true pending state arrives with card funding)
+### Phase 5: Wallet funding through Pay
+- [x] Existing per-user funding-account details and `funding.received` processing are implemented for the legacy `product='pay'` wallet.
+- [ ] Move funding-account details and bank-transfer/card top-up initiation behind the authenticated Wallet service API. Wallet owns the customer-facing funding UI.
+- [ ] Map every funding request to the server-authorized `wallet` product; never accept a product value from the request body.
+- [ ] Credit Wallet only through the agreed Wallet service contract, keyed by a provider event/idempotency key. Unmatched deposits go to `suspense`.
+- [ ] Represent pending, success, failure, replay and unknown-outcome states in the service contract. Do not expose a Pay Add money page.
+- [ ] Keep card top-up disabled until tokenization and provider-brand requirements are resolved.
 
-**Done when:** a mock deposit appears in the wallet once, even if the webhook is delivered five times.
-- [ ] Run `funding.test.ts` green
+**Done when:** a mock bank-transfer or card top-up requested by Wallet credits Wallet exactly once and never creates or mutates a Pay customer balance.
+- [ ] Run funding replay and failure tests against disposable Postgres
 
 ### Phase 6: Wallet, PIN and limits
 - [x] Transaction PIN: set, change, verify. scrypt with a server-side pepper, attempt counter, temporary lockout, never logged. Keyed by `(user, product)`.
 - [x] Limit tiers (per-transaction, daily, max balance) in `src/config/limits.ts`, enforced in the wallet module before any debit. **Values are placeholders.**
-- [x] Wallet auto-created on first login (`product = 'pay'`) (`ensureWallet` is called by the login callback)
+- [x] Legacy Pay wallet is auto-created on first login (`product = 'pay'`); remove this after a safe data reconciliation/migration.
 - [x] Rate limits on PIN verify and sends (per user and per IP) (Postgres fixed-window counters; IP limits use the ingress-provided `x-real-ip` header)
+- [ ] Wallet remains the owner of its balance and PIN. Pay checkout must use the approved Wallet authorization contract and must not collect or verify a Pay-owned PIN.
 
-**Done when:** all `wallet.test.ts` tests pass, including the concurrent daily-limit test and the lockout test.
+**Done when:** Wallet's product limits and PIN are isolated from legacy Pay data, and no Pay UI or API treats a customer balance as Pay-owned.
 - [ ] Verified
 
 ### Phase 6b: Service API for Spurs Wallet (new)
 Wallet is a separate service. It calls Pay for money movement and shares Accounts for auth. Depends on Phase 2 and on how Accounts issues service tokens.
 - [ ] Authenticate Wallet's calls with an Accounts-issued token for a confidential client (or mTLS / signed service token)
-- [ ] Map the calling client id to a `product` **server-side**, never from the request body, so Wallet can never act as `pay`
-- [ ] Endpoints under `/api/service/`: resolve wallet, balance, verify PIN, transfer, payout, activity
+- [ ] Map the calling client id to its allowed product **server-side**, never from the request body
+- [ ] Endpoints under `/api/service/`: Wallet funding-account details, bank-transfer/card top-up initiation and status; Wallet balance, PIN, transfer, payout, and activity where required
 - [ ] Idempotency key required on every money endpoint, scoped by caller
-- [ ] Decide where the PIN is typed (Wallet UI forwards it to Pay over the service call, or Wallet keeps its own) and document the trade-off
-- [ ] Contract tests: a Wallet caller cannot read or move Pay-product funds
+- [ ] Agree whether Pay asks Wallet to debit/authorize, or Wallet authorizes through a Pay contract. Establish one source of truth for Wallet debit and replay behavior.
+- [ ] Decide how checkout receives Wallet authorization without moving or storing the Wallet PIN in Pay.
+- [ ] Contract tests: a Wallet caller can act only on the Wallet product and cannot read or move Pay-product or other-product funds
 
-**Done when:** a Wallet test client can fund-check, transfer and read activity for its own `product` only, and every attempt to cross products fails.
+**Done when:** Wallet can securely retrieve funding details, initiate and reconcile top-ups, and perform only explicitly authorized operations for its own product.
 
-### Phase 7: Send money (P2P)
-- [ ] Recipient lookup by phone, email or `@tag` (add `tag` and privacy setting); show name only, never email or phone of non-contacts (partial: `@tag` only; name and tag returned)
-- [x] Transfer service: validate, check status guard, PIN, limits, idempotency key, ledger post, notify both sides (status/email guard in route; rate limit, PIN outside transaction, limits + ledger post inside one transaction)
-- [x] Beneficiaries/recent people, with search
-- [x] Failure handling: insufficient balance, recipient not found, limit hit, PIN locked, all via `AppError` codes
-- [ ] Concurrency and double-tap tests (database-backed tests are written; run against disposable Postgres before marking complete)
+### Phase 7: First-party checkout (replaces P2P UI and request/QR phases)
+- [ ] Define a private authenticated integration contract for Spurs-owned products; no public merchant onboarding/API keys in v1
+- [ ] Create checkout sessions with allowlisted product, server-owned amount/currency, reference, expiry, method eligibility, and idempotent creation
+- [ ] Build `/checkout/[id]`: summary, method choice, confirmation, pending/unknown outcome, success and failure
+- [ ] Add payment-method storage for provider tokens and safe card display metadata only; never store PAN/CVV
+- [ ] Implement Spurs Wallet authorization using the agreed Wallet/Pay source-of-truth contract
+- [ ] Implement card payment with approved tokenization and provider-neutral UI
+- [ ] Implement bank-transfer checkout with verified webhook status and safe pending/retry handling
+- [ ] Post a balanced `payment` transaction to the first-party product merchant account; idempotent retries and linked reversals
+- [ ] Define authenticated final-status delivery to the requesting Spurs product (polling or signed internal callback)
+- [ ] Tests: session ownership/expiry, amount tampering, each method, concurrent submit, idempotency replay/mismatch, unknown outcome, reversal
 
 ### Phase 8: Activity, receipts, notifications
-- [ ] Activity feed (cursor pagination, filters, search) built from ledger entries
-- [ ] Receipt page and shareable image/PDF with our reference (`SPY_...`)
-- [ ] In-app notifications; email for credits, debits, security events (partial: `notifications` table and `notify()` exist; no list UI or email yet)
+- [ ] Activity feed of checkout payments (cursor pagination as volume requires); keep Wallet top-ups in Wallet activity
+- [ ] Payment detail/receipt with first-party product, method summary, status, date and our reference (`SPY_...`)
+- [ ] Notify the customer and first-party product only from server-confirmed payment state; do not report P2P credits/debits as Pay checkout events
 - [ ] Optional: push (PWA) later
 
 ### Phase 9: UI/UX pass (runs alongside, locked in here)
-- [ ] Home: balance card (hide/show), quick actions (Send, Request, Scan, Add money), people row, recent activity (partial: static shell; Add money links to `/add-money`)
-- [ ] Send flow: recipient, custom amount keypad, note, review, PIN sheet, animated success, receipt
-- [ ] Loading skeletons, optimistic activity updates, empty states, error toasts with a retry
+- [ ] Home: payment-method summary, Add payment method action, setup requirements, recent payments
+- [ ] Payment methods: Wallet availability, tokenized saved cards, bank transfer option; no Pay balance or Add money page
+- [ ] Checkout: responsive method selection and method-specific states
+- [ ] Activity and payment detail/receipt
+- [ ] Settings: Accounts profile link, appearance, sign out; no Pay tag or PIN
+- [ ] Loading skeletons, empty states, and error states with safe retries; never show an optimistic payment success
 - [ ] Haptics on mobile, safe-area handling, 44px touch targets, reduced-motion support (partial: safe-area and reduced-motion done)
 - [ ] Accessibility: focus order, labels, contrast, screen-reader amounts ("two thousand naira")
 - [ ] PWA: manifest, icons, install prompt, offline shell
 
-### Phase 10: Withdrawals / bank transfer
-- [ ] Add bank account with name enquiry; require step-up auth
-- [ ] Payout flow: reserve funds (hold entry), `initiateTransfer`, state machine `pending, success, failed` (use `assertCanDebit` for limits)
-- [ ] On `payout.failed` or `payout.reversed`: auto reversal entries and a notification (register handlers via `registerHandler`)
-- [ ] Scheduled **reconciliation job**: compare pending payouts against provider status, fix stuck items; review `suspense`
-- [ ] Fees: configured in one place, posted to the `fees` account, shown before confirmation
+### Phase 10: Reconciliation, reversals, internal settlement
+- [ ] Reconcile pending checkout and funding attempts against provider status; safely resolve stuck and unknown outcomes
+- [ ] On payment reversal/refund, create linked ledger reversals and notify only after server confirmation
+- [ ] Reconcile provider clearing and settlement accounts; unmatched funding goes to `suspense`
+- [ ] Define the internal merchant-account posting and product-status contract; no external merchant settlement in v1
+- [ ] Confirm fees, refunds, and support handling before enabling live checkout
 
-### Phase 11: Request money, QR, links
-- [ ] Money requests (create, accept, decline, expire)
-- [ ] Personal QR and "pay me" link (amount optional), scan to pay
-- [ ] Share sheet for links and receipts
-
-### Phase 12: Bills (airtime, data)
-- [ ] Decide: reuse the existing VTU platform via a service client, or call a provider directly
-- [ ] Purchase flow reuses PIN, limits, idempotency and ledger exactly like transfers
-
-### Phase 13: Hardening and launch
+### Phase 11: Hardening and launch
 - [ ] Security headers/CSP, CSRF checks on mutating routes, strict CORS
-- [ ] Rate limits everywhere money moves; abuse signals (velocity, new-device sends); purge old `rate_limits` windows
+- [ ] Rate limits everywhere money moves; abuse signals (velocity, new-device checkout); purge old `rate_limits` windows
 - [ ] Audit log for every money and security event, with actor, IP and device
-- [ ] Observability: error tracking, structured logs with redaction, ledger-balance alarm (`checkInvariants`), stuck-payout alarm, webhook backlog alarm (`processPendingEvents`)
+- [ ] Observability: error tracking, structured logs with redaction, ledger invariant alarm (`checkInvariants`), pending-payment alarm, webhook backlog alarm (`processPendingEvents`)
 - [ ] Backups and a tested restore; migration rollback plan
-- [ ] Load test on transfers; pen-test checklist; privacy and data-export hooks consistent with Accounts
-- [ ] Runbooks: provider outage, webhook backlog, reconciliation mismatch, suspense review, user dispute
+- [ ] Load test on checkout and funding; pen-test checklist; privacy and data-export hooks consistent with Accounts
+- [ ] Runbooks: provider outage, pending/unknown payment, webhook backlog, reconciliation mismatch, suspense review, customer dispute
 
 ---
 
@@ -226,8 +236,9 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 - [x] PINs are per product
 - [x] Ledger and payments modules have no Pay-specific UI or copy
 - [ ] Notifications and identity modules are product-agnostic (identity is still a stub)
-- [ ] Pay exposes the service API for Wallet (Phase 6b); Wallet never reads Pay's database
-- [ ] When Wallet starts: it authenticates through Accounts, calls Pay's service API, and owns only its own UI and product logic
+- [ ] Pay exposes authenticated funding-account and card/bank-transfer top-up APIs for Wallet (Phase 6b); Wallet never reads Pay's database
+- [ ] Wallet remains the source of truth for its balance and PIN, and owns the Wallet customer UI
+- [ ] Wallet P2P transfer code may reuse the retained transfer/recipient modules after a separate contract and security review
 
 ---
 
@@ -247,10 +258,14 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 
 - [x] ORM: **Drizzle**
 - [ ] Job runner: BullMQ vs hosted queue (interim: inline plus sweep)
-- [x] Card funding in v1: **bank-transfer funding only**; card deferred
-- [ ] KYC tier thresholds and limit values (placeholders in `src/config/limits.ts`)
-- [ ] `@tag` rules (length, reserved words, changeability)
-- [ ] Fee schedule (only a placeholder `cardFundingBps` exists)
+- [x] Initial merchant scope: **Spurs-owned products only**; no external merchants in v1
+- [ ] Wallet debit source of truth for checkout (Pay calls Wallet, or Wallet authorizes through a Pay contract)
+- [ ] Wallet PIN entry and verification handoff for checkout
+- [ ] Provider card form: unbranded embedded tokenization or an approved branding exception
+- [ ] Checkout result delivery to Spurs products: status polling or signed internal callback
+- [ ] Merchant account mapping, internal settlement, refunds and reconciliation contract
+- [ ] Wallet funding API contract: funding account details, card top-up, bank-transfer top-up, and event idempotency
+- [ ] Card and bank-transfer fees, limits, expiry and available-method policy
 - [ ] Real payment provider vendor and credentials
-- [ ] Where the transaction PIN is entered for Wallet (see Phase 6b)
 - [ ] How Accounts issues service tokens for Wallet to Pay calls
+- [ ] Legacy `product='pay'` wallet/funding data migration and retirement plan

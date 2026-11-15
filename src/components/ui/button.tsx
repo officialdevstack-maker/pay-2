@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'md' | 'lg';
+export type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type Size = 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
   primary: 'bg-primary text-primary-foreground hover:brightness-110 active:brightness-95',
@@ -11,6 +11,15 @@ const variants: Record<Variant, string> = {
   danger: 'bg-danger text-white hover:brightness-110 active:brightness-95',
 };
 const sizes: Record<Size, string> = { md: 'h-11 px-5 text-[15px]', lg: 'h-14 px-6 text-base' };
+
+export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className?: string) {
+  return cn(
+    'inline-flex items-center justify-center gap-2 rounded-control font-semibold transition duration-press active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45',
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -49,12 +58,7 @@ export function Button({
       type={type}
       aria-busy={loading || undefined}
       disabled={disabled || loading}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-control font-semibold transition duration-press active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45',
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      className={buttonClasses(variant, size, className)}
       {...props}
     >
       {loading ? <Spinner /> : children}

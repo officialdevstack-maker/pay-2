@@ -20,17 +20,17 @@ Professional fintech UI has five qualities. Every design decision should serve a
 
 Spend boldness in one place and keep the rest disciplined.
 
-**The memorable thing in Spurs Pay is the amount.** Large, tabular, tightly tracked numerals on a plain surface: the balance on Home, the amount on the keypad, the amount on the receipt. These are the same treatment, so a user learns it once.
+**The amount is the hero on checkout and receipt.** Large, tabular, tightly tracked numerals on a plain surface use the same treatment, so a user learns it once. Home focuses on payment methods and recent payments; it does not show a customer balance.
 
-The second distinct moment is the single success confirmation after a transfer. Nothing else gets special treatment.
+The second distinct moment is the single success confirmation after a payment. Nothing else gets special treatment.
 
 ## 4. Principles
 
 ### 4.1 Hierarchy comes from type and space, not boxes
-Do not wrap every group in a bordered rounded card. Use whitespace and size first. Use a surface only when content needs to read as one object (the balance panel, a list container, a sheet).
+Do not wrap every group in a bordered rounded card. Use whitespace and size first. Use a surface only when content needs to read as one object (a list container, a sheet).
 
 ### 4.2 Lists over tiles
-Money apps are mostly lists: people, activity, settings. Build them as list rows inside one surface, separated by hairlines. Do not build them as rows of identical cards.
+Payment methods, activity and settings are mostly lists. Build them as list rows inside one surface, separated by hairlines. Do not build them as rows of identical cards.
 
 ### 4.3 One primary action per screen
 There is one filled primary button. Secondary actions are tonal or text. If two things compete, one of them is wrong.
@@ -45,7 +45,7 @@ There is one filled primary button. Secondary actions are tonal or text. If two 
 Money in is green with a `+`. Money out is normal text with a `−`. Red debits make every payment look like a problem.
 
 ### 4.5 Structure carries information
-Dividers, borders, headings and icons exist because they tell the user something. If a divider does not separate two different things, remove it. Numbered steps only where the content is a real sequence (the send flow progress yes, a feature list no).
+Dividers, borders, headings and icons exist because they tell the user something. If a divider does not separate two different things, remove it. Numbered steps only where the content is a real sequence, not for a feature list.
 
 ### 4.6 Real content, always
 Design with real Nigerian names (Ada Okafor, Tunde Bello, Ngozi Eze, Emeka Obi, Fatima Yusuf), real amounts (₦12,500.00, ₦850.00, ₦1,250.50), and real states. Never "John Doe", "Lorem", `$`, or round demo numbers like ₦1,000,000.
@@ -74,7 +74,7 @@ Generated interfaces cluster around the same defaults. Each is fine in isolation
 | Fade-and-slide-up on every section, hover lift on every card | Scattered motion | Motion only for user actions and one confirmation (section 7) |
 | Mono font for small labels | Decorative "techy" feel | One family. Tabular numerals for numbers |
 | Near-black `#0B0B0B` or warm cream `#F4F1EA` with terracotta accent | The generated-site palette | The existing cool neutral and teal palette in `globals.css` |
-| Hero stat trio with a gradient accent | Default dashboard | Balance is one figure on a flat surface |
+| Hero stat trio with a gradient accent | Default dashboard | Keep Home focused on payment methods and recent payments |
 | Placeholder-sounding copy ("Seamless payments for everyone") | Marketing filler | Specific, plain statements of what happens |
 | Disabled buttons and "Coming soon" for unbuilt features | Looks unfinished | Hide the feature until it works |
 | Fake charts and decorative stats | Padding | Only data the user needs, from real rows |
@@ -100,8 +100,8 @@ Motion shows what changed. It never decorates.
 | Press feedback on buttons and rows | 100 ms | Slight darken, or scale to 0.98 on buttons |
 | Sheet open and close | 220 ms | Slide from bottom, fade the scrim |
 | Toast in and out | 180 ms | Fade and 8 px rise |
-| Page-level content swap (balance hide, tab filter) | 150 ms | Crossfade |
-| Transfer success check | 300 ms once | Stroke draws in. Plays once, no loop |
+| Page-level content swap (tab filter) | 150 ms | Crossfade |
+| Payment success check | 300 ms once | Stroke draws in. Plays once, no loop |
 | Skeleton | 1.4 s loop | Gentle opacity pulse, not a shimmering gradient sweep |
 
 Easing: `cubic-bezier(0.2, 0, 0, 1)` for entering, `cubic-bezier(0.4, 0, 1, 1)` for leaving.
@@ -118,7 +118,7 @@ Prefer CSS transitions and the Web Animations API. Add Framer Motion only if a g
 
 - Single column, 20 px side padding, content width up to 448 px (`max-w-md`, already in the layout).
 - Top header 56 px. Bottom navigation 64 px plus the safe area inset.
-- Sheets rise from the bottom. Full-screen routes for multi-step flows (Send).
+- Sheets rise from the bottom. Checkout keeps a single clear payment step.
 - Primary action sits at the bottom of the screen on flow steps, above the safe area, so the thumb reaches it.
 
 ### Desktop (768 px and above)
@@ -126,14 +126,14 @@ Prefer CSS transitions and the Web Animations API. Add Framer Motion only if a g
 - Navigation moves to a left rail, 240 px, with icon and label.
 - Content column is 560 px wide, centred in the remaining space, with a 32 px top offset.
 - Sheets become centred dialogs, 420 px wide.
-- The send flow keeps a single column. Do not invent a two-pane layout for the sake of filling space.
-- Keyboard works everywhere: Enter submits, Escape closes sheets, digits type into the keypad.
+- Checkout keeps a single column. Do not invent a two-pane layout for the sake of filling space.
+- Keyboard works everywhere: Enter submits, Escape closes sheets.
 
 ### Alignment
 
 - Text is left-aligned. Headings are left-aligned.
 - Amounts in lists are right-aligned so digits line up down the column.
-- Centre alignment only for the success state, the PIN dots, and the keypad amount.
+- Centre alignment only for the success state.
 
 ## 9. Writing and design are one job
 
@@ -146,3 +146,6 @@ When you choose against a rule in this document, add a line here with the date, 
 | Date | Screen | Decision | Reason |
 | --- | --- | --- | --- |
 | 2026-11-14 | Foundations | Use 12 px control, 16 px card and 24 px sheet radii. | Match the design-system radius scale and distinguish controls, surfaces and floating layers. |
+| 2026-11-16 | Home | Show payment methods and recent payments; omit P2P search, people, send/add-money actions, and a customer balance. | Pay is the first-party checkout and payment-methods service; Wallet owns customer balances and funding UI. |
+| 2026-11-16 | Shell | The desktop rail is collapsible (240 ↔ 72) and its state lives in a cookie, not `localStorage`. | The server can render the correct width on first paint, so there is no layout jump. |
+| 2026-11-16 | Shell | Sign out appears in the desktop rail footer as well as in Settings. | It is one click on desktop, and Settings stays the home on mobile. |
