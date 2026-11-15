@@ -78,7 +78,7 @@ Auth routes (`/auth/*`, `/signed-out`) are outside the app shell and stay minima
 
 ### 6.1 Sign-in and setup
 
-1. The customer signs in through Spurs Accounts. Pay maps the Accounts subject to its customer record.
+1. The customer app uses Spurs Accounts and maps the Accounts subject to its customer record. Whether an external merchant's checkout requires a Spurs Account or supports guest card checkout remains open in section 13.
 2. Pay must not create a `product='pay'` user wallet as part of the new product model. Existing Pay-product wallets are legacy data and need a migration/retirement plan before their code or records are removed.
 3. Home shows only actionable setup requirements that are relevant to checkout. Email verification may be required by policy. Do not ask for a Pay `@tag` or Pay PIN.
 4. Wallet linking and authorisation depend on the open Wallet integration decisions in section 13. Do not show a fake linked/ready state.
@@ -219,6 +219,7 @@ Track these once analytics exist. Aim for direction, not vanity.
 | --- | --- |
 | Wallet debit source of truth: Pay calls Wallet, or Wallet authorizes/debits through a Pay contract | Prevents double-spend and determines checkout authorization, idempotency, and ledger ownership |
 | Wallet PIN entry and verification handoff | Wallet owns the PIN; checkout cannot collect or verify it by assumption |
+| External checkout customer identity: Spurs Account required or guest card checkout | Determines account creation, saved-card access, Wallet availability, and checkout session binding |
 | Provider card form: unbranded embedded tokenization or an approved branding exception | Determines whether the card method can satisfy provider secrecy |
 | Checkout result delivery: status polling or signed webhook/callback | Merchants need trusted, retryable final status without duplicate side effects |
 | External merchant onboarding, due diligence, credential lifecycle and webhook configuration | External access must be approved, scoped, revocable, and supportable |

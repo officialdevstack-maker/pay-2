@@ -1,6 +1,6 @@
 # Spurs Pay: Build TODO
 
-Spurs Pay is the payment-methods and hosted-checkout service for **Spurs-owned products only** in the first release. It signs customers in with **Spurs Accounts** (OIDC) and moves money through a hidden payment provider. **Spurs Wallet is a separate service** that owns Wallet balances and its customer UI; it uses Pay's authenticated service API to fund Wallet. Pay does not own customer balances or expose P2P transfer screens.
+Spurs Pay is the payment-methods and hosted-checkout service for **Spurs-owned products and approved external merchants** in the first release. Spurs products use a private authenticated integration; external merchants use managed onboarding, scoped API credentials, signed payment webhooks, and settlement. **Spurs Wallet is a separate service** that owns Wallet balances and its customer UI; it uses Pay's authenticated service API to fund Wallet. Pay does not own customer balances or expose P2P transfer screens.
 
 Tick items as they land. Do not start a phase until the previous phase's "Done when" is true.
 
@@ -126,7 +126,7 @@ src/
 - [x] Schema: `ledger_accounts`, `transactions`, `ledger_entries`, `idempotency_keys` (+ `wallets` with `product`, `currency`, cached `balance`, `version`)
 - [x] Ledger service API: `post(transaction, entries[])` validates balance, currency and idempotency, inside one DB transaction
 - [x] System accounts: `provider_clearing`, `fees`, `suspense`, `settlement`
-- [ ] Define payment posting entries from the selected payment source to an internal Spurs product merchant account, including linked reversals
+- [ ] Define payment posting entries from the selected payment source to the merchant's ledger account, including linked reversals and settlement
 - [x] Balance rules: wallets cannot go negative (DB `CHECK` as the last line of defence)
 - [x] Locking: lock accounts **in ascending id order** to prevent deadlocks
 - [x] Reversal helper (creates mirrored entries linked to the original)
@@ -183,22 +183,24 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 
 **Done when:** Wallet can securely retrieve funding details, initiate and reconcile top-ups, and perform only explicitly authorized operations for its own product.
 
-### Phase 7: First-party checkout (replaces P2P UI and request/QR phases)
-- [ ] Define a private authenticated integration contract for Spurs-owned products; no public merchant onboarding/API keys in v1
-- [ ] Create checkout sessions with allowlisted product, server-owned amount/currency, reference, expiry, method eligibility, and idempotent creation
+### Phase 7: Merchant checkout (replaces P2P UI and request/QR phases)
+- [ ] Define private authenticated integration for Spurs products and a managed onboarding/approval contract for external merchants
+- [ ] Issue scoped external merchant API credentials with secure one-time display, rotation, revocation, audit, and rate limits; store no recoverable secret
+- [ ] Create checkout sessions for the authenticated merchant with server-owned amount/currency, reference, expiry, method eligibility, and idempotent creation
 - [ ] Build `/checkout/[id]`: summary, method choice, confirmation, pending/unknown outcome, success and failure
+- [ ] Enforce merchant ownership for session lookup, status, activity, and return URLs; never trust browser-supplied merchant identity or redirect targets
 - [ ] Add payment-method storage for provider tokens and safe card display metadata only; never store PAN/CVV
 - [ ] Implement Spurs Wallet authorization using the agreed Wallet/Pay source-of-truth contract
 - [ ] Implement card payment with approved tokenization and provider-neutral UI
 - [ ] Implement bank-transfer checkout with verified webhook status and safe pending/retry handling
-- [ ] Post a balanced `payment` transaction to the first-party product merchant account; idempotent retries and linked reversals
-- [ ] Define authenticated final-status delivery to the requesting Spurs product (polling or signed internal callback)
+- [ ] Post a balanced `payment` transaction to the merchant ledger account; idempotent retries and linked reversals
+- [ ] Define authenticated status polling for Spurs products and signed, retryable webhook delivery for external merchants
 - [ ] Tests: session ownership/expiry, amount tampering, each method, concurrent submit, idempotency replay/mismatch, unknown outcome, reversal
 
 ### Phase 8: Activity, receipts, notifications
 - [ ] Activity feed of checkout payments (cursor pagination as volume requires); keep Wallet top-ups in Wallet activity
-- [ ] Payment detail/receipt with first-party product, method summary, status, date and our reference (`SPY_...`)
-- [ ] Notify the customer and first-party product only from server-confirmed payment state; do not report P2P credits/debits as Pay checkout events
+- [ ] Payment detail/receipt with merchant, method summary, status, date and our reference (`SPY_...`)
+- [ ] Notify customers and merchants only from server-confirmed payment state; sign and retry external webhooks, and make delivery replay-safe
 - [ ] Optional: push (PWA) later
 
 ### Phase 9: UI/UX pass (runs alongside, locked in here)
@@ -212,11 +214,12 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 - [ ] Accessibility: focus order, labels, contrast, screen-reader amounts ("two thousand naira")
 - [ ] PWA: manifest, icons, install prompt, offline shell
 
-### Phase 10: Reconciliation, reversals, internal settlement
+### Phase 10: Reconciliation, reversals, and merchant settlement
 - [ ] Reconcile pending checkout and funding attempts against provider status; safely resolve stuck and unknown outcomes
 - [ ] On payment reversal/refund, create linked ledger reversals and notify only after server confirmation
 - [ ] Reconcile provider clearing and settlement accounts; unmatched funding goes to `suspense`
-- [ ] Define the internal merchant-account posting and product-status contract; no external merchant settlement in v1
+- [ ] Define merchant account mapping, settlement schedules, payout destinations, fees, and reconciliation for external merchants and Spurs products
+- [ ] Track settlement lifecycle and reconcile provider clearing, merchant liabilities, and settlement accounts; unmatched funds go to `suspense`
 - [ ] Confirm fees, refunds, and support handling before enabling live checkout
 
 ### Phase 11: Hardening and launch
@@ -258,12 +261,14 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 
 - [x] ORM: **Drizzle**
 - [ ] Job runner: BullMQ vs hosted queue (interim: inline plus sweep)
-- [x] Initial merchant scope: **Spurs-owned products only**; no external merchants in v1
+- [x] Initial merchant scope: **Spurs-owned products and approved external merchants**; external merchant onboarding is managed, not self-service
+- [ ] External checkout customer identity: determine whether a Spurs Account is required or guest card checkout is supported; Wallet availability follows Wallet identity/linking
+- [ ] External merchant approval, API credential scopes/rotation, webhook signing and retry contract
 - [ ] Wallet debit source of truth for checkout (Pay calls Wallet, or Wallet authorizes through a Pay contract)
 - [ ] Wallet PIN entry and verification handoff for checkout
 - [ ] Provider card form: unbranded embedded tokenization or an approved branding exception
 - [ ] Checkout result delivery to Spurs products: status polling or signed internal callback
-- [ ] Merchant account mapping, internal settlement, refunds and reconciliation contract
+- [ ] Merchant ledger mapping, external settlement schedule, refunds and reconciliation contract
 - [ ] Wallet funding API contract: funding account details, card top-up, bank-transfer top-up, and event idempotency
 - [ ] Card and bank-transfer fees, limits, expiry and available-method policy
 - [ ] Real payment provider vendor and credentials

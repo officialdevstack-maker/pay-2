@@ -3,7 +3,7 @@
 
 Wireframes, content and states for each route. Components are named as in [design-system.md](design-system.md). Copy follows [content-guidelines.md](content-guidelines.md). Rules and error handling come from [product-spec.md](product-spec.md).
 
-Wireframes are structure, not pixels. Sample payment data uses real-looking NGN amounts and Spurs product names; never display provider sample data as if it were live.
+Wireframes are structure, not pixels. Sample payment data uses real-looking NGN amounts and merchant names; never display provider sample data as if it were live.
 
 Every screen handles loading, empty, error, offline, pending, blocked and success where they apply (product-spec section 9).
 
@@ -23,7 +23,7 @@ Mobile                                  Desktop (768+)
 └──────────────────────────┘
 ```
 
-Rules: navigation contains only built routes. The "Verify your email" banner sits below the mobile header while email verification is required. Checkout is opened by a first-party Spurs product, not from the navigation.
+Rules: navigation contains only built routes. The "Verify your email" banner sits below the mobile header while email verification is required. Checkout is opened by an authorized Spurs product or approved external merchant, not from the navigation.
 
 ## 1. Home `/`
 
@@ -42,7 +42,7 @@ Rules: navigation contains only built routes. The "Verify your email" banner sit
 ├──────────────────────────┤
 │ Recent payments  See all │
 │ ┌──────────────────────┐ │
-│ │ Spurs Store   −₦850  │ │
+│ │ Merchant     −₦850   │ │
 │ │ Paid · 2:14 PM       │ │
 │ └──────────────────────┘ │
 └──────────────────────────┘
@@ -96,7 +96,7 @@ Dependencies: profile/verification state, payment-method service, checkout activ
 
 ```
 ┌──────────────────────────┐
-│ Spurs Store              │
+│ Merchant name            │
 │ Payment                  │
 │                          │
 │ Amount                   │
@@ -112,7 +112,8 @@ Dependencies: profile/verification state, payment-method service, checkout activ
 └──────────────────────────┘
 ```
 
-- Merchant/product identity, amount, and currency are server-owned and read-only. Checkout accepts sessions from Spurs-owned products only.
+- Merchant identity, amount, and currency are server-owned and read-only. Checkout accepts sessions only from authorized Spurs products or approved external merchants.
+- Show the merchant's verified display name. Return links must resolve only to a URL configured for that merchant; never trust an arbitrary browser-supplied redirect.
 - List only methods eligible for this session. Wallet available funds may be shown only from Wallet's authoritative response.
 - Wallet: invoke the agreed Wallet authorization/debit contract. PIN ownership and entry are unresolved; do not implement a Pay-owned PIN.
 - Card: collect credentials only through approved tokenized/embedded fields. Do not submit raw card data to Pay.
@@ -124,13 +125,13 @@ States:
 | State | Treatment |
 | --- | --- |
 | Loading | Checkout summary and method skeletons |
-| Expired or invalid session | Explain that checkout is unavailable and provide a safe return to the Spurs product |
+| Expired or invalid session | Explain that checkout is unavailable and provide a safe return to the requesting merchant |
 | Wallet unavailable/insufficient | Do not debit; offer another eligible method |
 | Card authentication/decline | Provider-neutral explanation; offer safe retry or another method |
 | Bank transfer pending | Keep instructions and explain that confirmation is pending |
 | Unknown outcome | "We couldn't confirm this payment yet." Check the existing attempt; never start a second payment |
-| Success | Show a confirmed receipt summary and return to the requesting Spurs product |
-| Failure | Show the mapped reason and retain a safe route back to the product |
+| Success | Show a confirmed receipt summary and return to the requesting merchant |
+| Failure | Show the mapped reason and retain a safe route back to the merchant |
 
 ## 4. Activity `/activity`
 
@@ -139,17 +140,17 @@ States:
 │ Activity                 │
 │                          │
 │ Today                    │
-│ Spurs Store     −₦850   │
+│ Merchant        −₦850   │
 │ Paid · 2:14 PM           │
 │                          │
 │ Yesterday                │
-│ Spurs Tickets  −₦12,500 │
+│ Merchant       −₦12,500 │
 │ Paid · 6:20 PM           │
 └──────────────────────────┘
 ```
 
 - List Pay checkout payments, newest first, grouped by Africa/Lagos day.
-- Rows show the Spurs product, amount, status, and time. Selecting a row opens `/activity/[reference]`.
+- Rows show the merchant, amount, status, and time. Selecting a row opens `/activity/[reference]`.
 - Do not include Wallet top-ups or retained P2P transfers as Pay checkout transactions.
 - Pagination and filters follow the activity API contract; never display provider references.
 
@@ -162,7 +163,7 @@ States:
 │                          │
 │ Paid                     │
 │ −₦12,500.00              │
-│ Spurs Tickets            │
+│ Merchant name            │
 │                          │
 │ Method   Visa •••• 5438  │
 │ Date     16 Nov 2026     │
