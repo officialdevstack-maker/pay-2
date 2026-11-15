@@ -61,6 +61,12 @@ export interface PaymentProvider {
   listBanks(): Promise<Bank[]>;
   resolveAccount(input: { bankCode: string; accountNumber: string }): Promise<ResolvedAccount>;
   createFundingAccount(input: { userRef: string; name: string; email: string }): Promise<FundingAccount>;
+  createCheckoutAccount(input: {
+    reference: string;
+    amount: Kobo;
+    name: string;
+    expiresAt: Date;
+  }): Promise<FundingAccount>;
   initiateTransfer(input: TransferRequest): Promise<TransferResult>;
   getTransferStatus(reference: string): Promise<TransferResult>;
   /** Must use constant-time comparison. Receives the exact raw body. */

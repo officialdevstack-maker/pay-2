@@ -186,14 +186,14 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 ### Phase 7: Merchant checkout (replaces P2P UI and request/QR phases)
 - [ ] Define private authenticated integration for Spurs products and a managed onboarding/approval contract for external merchants
 - [ ] Issue scoped external merchant API credentials with secure one-time display, rotation, revocation, audit, and rate limits; store no recoverable secret
-- [ ] Create checkout sessions for the authenticated merchant with server-owned amount/currency, reference, expiry, method eligibility, and idempotent creation
-- [ ] Build `/checkout/[id]`: summary, method choice, confirmation, pending/unknown outcome, success and failure
-- [ ] Enforce merchant ownership for session lookup, status, activity, and return URLs; never trust browser-supplied merchant identity or redirect targets
+- [x] Create checkout sessions for the authenticated merchant with server-owned amount/currency, reference, expiry, method eligibility, and idempotent creation
+- [x] Build `/checkout/[id]`: summary, method choice, confirmation, pending/unknown outcome, success and failure
+- [x] Enforce merchant ownership for session lookup, status, activity, and return URLs; never trust browser-supplied merchant identity or redirect targets
 - [ ] Add payment-method storage for provider tokens and safe card display metadata only; never store PAN/CVV
 - [ ] Implement Spurs Wallet authorization using the agreed Wallet/Pay source-of-truth contract
 - [ ] Implement card payment with approved tokenization and provider-neutral UI
-- [ ] Implement bank-transfer checkout with verified webhook status and safe pending/retry handling
-- [ ] Post a balanced `payment` transaction to the merchant ledger account; idempotent retries and linked reversals
+- [x] Implement bank-transfer checkout with verified webhook status and safe pending/retry handling
+- [x] Post a balanced `payment` transaction to the merchant ledger account; idempotent retries and linked reversals
 - [ ] Define authenticated status polling for Spurs products and signed, retryable webhook delivery for external merchants
 - [ ] Tests: session ownership/expiry, amount tampering, each method, concurrent submit, idempotency replay/mismatch, unknown outcome, reversal
 
@@ -218,6 +218,7 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 - [ ] Reconcile pending checkout and funding attempts against provider status; safely resolve stuck and unknown outcomes
 - [ ] On payment reversal/refund, create linked ledger reversals and notify only after server confirmation
 - [ ] Reconcile provider clearing and settlement accounts; unmatched funding goes to `suspense`
+- [ ] Review `suspense` for mismatched amounts and unmatched accounts before attempting any forced settlement or refund
 - [ ] Define merchant account mapping, settlement schedules, payout destinations, fees, and reconciliation for external merchants and Spurs products
 - [ ] Track settlement lifecycle and reconcile provider clearing, merchant liabilities, and settlement accounts; unmatched funds go to `suspense`
 - [ ] Confirm fees, refunds, and support handling before enabling live checkout

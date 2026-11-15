@@ -349,6 +349,23 @@ export const checkoutSessions = pgTable(
   ],
 );
 
+export const checkoutTransfers = pgTable(
+  'checkout_transfers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .unique()
+      .references(() => checkoutSessions.id),
+    accountNumber: text('account_number').notNull().unique(),
+    accountName: text('account_name').notNull(),
+    bankName: text('bank_name').notNull(),
+    providerRef: text('provider_ref').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check('checkout_transfers_account_chk', sql`${t.accountNumber} ~ '^[0-9]{10}$'`)],
+);
+
 export const paymentMethods = pgTable(
   'payment_methods',
   {

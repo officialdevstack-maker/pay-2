@@ -44,6 +44,22 @@ export const mockProvider: PaymentProvider = {
     };
   },
 
+  async createCheckoutAccount({ reference, name }) {
+    const digits = createHash('sha256')
+      .update(`checkout:${reference}`)
+      .digest()
+      .readUInt32BE(0)
+      .toString()
+      .padStart(8, '0')
+      .slice(-8);
+    return {
+      accountNumber: `98${digits}`,
+      accountName: name,
+      bankName: 'Sample Bank One',
+      providerRef: `mock_co_${reference}`,
+    };
+  },
+
   async initiateTransfer(input) {
     if (input.amount <= 0n) throw new ProviderError('REJECTED', 'amount must be positive');
     const existing = transfers.get(input.reference);

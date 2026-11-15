@@ -8,4 +8,5 @@ export const RATE_RULES = {
   pin_verify: { limit: 10, windowSeconds: 60 },
   service_client: { limit: 600, windowSeconds: 60 },
   checkout_api: { limit: 300, windowSeconds: 60 },
+  checkout_pay: { limit: 20, windowSeconds: 60 },
 } as const;

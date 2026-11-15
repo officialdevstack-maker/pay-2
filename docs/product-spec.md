@@ -160,6 +160,11 @@ The checkout contract must define stable `AppError` codes before the UI is built
 | Outcome | Treatment |
 | --- | --- |
 | Invalid, unknown, or expired session | Explain that checkout is no longer available; provide a safe return to the requesting Spurs product |
+| `CHECKOUT_NOT_FOUND` | Show a safe not-found state and return the merchant to its configured URL. |
+| `MERCHANT_NOT_FOUND` | Treat as a forbidden checkout client; do not expose the internal lookup path. |
+| `MERCHANT_UNAVAILABLE` | Explain the merchant cannot take payments right now and keep the customer on a safe return path. |
+| `CHECKOUT_UNAVAILABLE` | Explain that this checkout is no longer available and offer a safe return to the merchant. |
+| `CHECKOUT_CANCELLED` | Explain that the checkout was cancelled and offer a return to the merchant. |
 | Wallet unavailable or insufficient | Do not debit; offer another available payment method |
 | Card authentication/decline | Show a plain, provider-neutral explanation and allow a safe retry or another method |
 | Bank transfer awaiting confirmation | Show the transfer instructions and pending state; do not claim success |

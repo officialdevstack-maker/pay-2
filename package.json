@@ -14,7 +14,8 @@
     "check:leaks:source": "node scripts/check-provider-leaks.mjs --source-only",
     "db:check": "node scripts/db-check.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "dev:transfer": "node scripts/simulate-transfer.mjs"
   },
   "dependencies": {
     "@spurs/auth": "github:officialdevstack-maker/node-accounts-js-sdk",

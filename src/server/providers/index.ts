@@ -5,6 +5,7 @@ import type { PaymentProvider } from './types';
 
 export type { PaymentProvider, ProviderEvent, ProviderEventType } from './types';
 export { mapProviderError, ProviderError } from './errors';
+export { isBrandSafe } from './brand';
 
 /** Add one line per adapter. This is the only place drivers are registered. */
 const DRIVERS: Record<string, () => Promise<PaymentProvider>> = {

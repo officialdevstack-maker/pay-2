@@ -1,0 +1,51 @@
+import 'server-only';
+import { eq } from 'drizzle-orm';
+import { AppError } from '@/lib/errors';
+import { post, systemAccountId } from '@/modules/ledger';
+import { db, type Tx } from '@/server/db/client';
+import { checkoutSessions, merchants } from '@/server/db/schema';
+
+export async function settleSession(
+  sessionId: string,
+  idempotencyKey: string,
+  tx?: Tx,
+): Promise<{ reference: string; replayed: boolean }> {
+  return tx ? run(tx, sessionId, idempotencyKey) : db.transaction((inner) => run(inner, sessionId, idempotencyKey));
+}
+
+async function run(tx: Tx, sessionId: string, idempotencyKey: string) {
+  const [session] = await tx
+    .select()
+    .from(checkoutSessions)
+    .where(eq(checkoutSessions.id, sessionId))
+    .for('update')
+    .limit(1);
+  if (!session) throw new AppError('CHECKOUT_NOT_FOUND', 'We could not find that checkout session.', 404);
+  if (session.status === 'paid') return { reference: session.reference, replayed: true };
+  if (session.status === 'cancelled') {
+    throw new AppError('CHECKOUT_CANCELLED', 'This checkout was cancelled.', 409);
+  }
+
+  const [merchant] = await tx.select().from(merchants).where(eq(merchants.id, session.merchantId)).limit(1);
+  if (!merchant) throw new AppError('INTERNAL', 'Merchant missing.');
+
+  const posted = await post(
+    {
+      type: 'payment',
+      idempotency: { scope: `checkout:${session.id}`, key: idempotencyKey },
+      entries: [
+        { accountId: await systemAccountId('provider_clearing', tx), direction: 'debit', amount: session.amount },
+        { accountId: merchant.ledgerAccountId, direction: 'credit', amount: session.amount },
+      ],
+      metadata: { session: session.reference, merchant: merchant.id, merchantReference: session.merchantReference },
+    },
+    tx,
+  );
+
+  await tx
+    .update(checkoutSessions)
+    .set({ status: 'paid', transactionId: posted.id, paidAt: new Date() })
+    .where(eq(checkoutSessions.id, session.id));
+
+  return { reference: session.reference, replayed: false };
+}

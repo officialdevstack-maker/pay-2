@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { env } from '@/env';
 import { AppError } from '@/lib/errors';
 import { route } from '@/lib/request';
+import '@/modules/checkout/register';
 import { ingestWebhook } from '@/modules/payments';
 
 export const runtime = 'nodejs';

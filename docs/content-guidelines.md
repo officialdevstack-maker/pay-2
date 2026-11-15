@@ -89,8 +89,10 @@ Implementation: `src/lib/money.ts` gets `spokenNaira(kobo, { sign })`, covered b
 | --- | --- |
 | Home primary | Add payment method |
 | Payment methods | Add card |
+| Checkout method | Pay by bank transfer |
 | Checkout confirm | Pay ₦12,500.00 |
 | Payment result | Done, View receipt, Return to Spurs Store |
+| Bank transfer details | Send exactly |
 | Receipt | Share receipt |
 | Settings | Sign out |
 | After an error | Try again |
@@ -118,6 +120,8 @@ UI-only messages (not from the server):
 | No connection | You appear to be offline. |
 | Timeout | We couldn't confirm this payment yet. |
 | Unknown outcome | We couldn't confirm this payment yet. |
+| No payment method available for this payment yet | No payment method is available for this payment yet. |
+| Waiting for your transfer | Waiting for your transfer. We will confirm it here once it arrives, usually within a few minutes. You can leave this page and check Activity. |
 | Still unknown after retries | We are still checking. You can leave this screen and check Activity. |
 
 Error placement: inline beside the field it belongs to, `role="alert"`. A toast is never the only place an error appears.
