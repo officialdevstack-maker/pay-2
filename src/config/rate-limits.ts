@@ -7,4 +7,5 @@ export const RATE_RULES = {
   contact_lookup_ip: { limit: 30, windowSeconds: 60 },
   pin_verify: { limit: 10, windowSeconds: 60 },
   service_client: { limit: 600, windowSeconds: 60 },
+  checkout_api: { limit: 300, windowSeconds: 60 },
 } as const;

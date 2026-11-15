@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, House, Settings, type LucideIcon } from 'lucide-react';
+import { Clock, CreditCard, House, Send, Settings, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BUILT_NAV, isNavActive, type NavIcon } from '@/config/nav';
@@ -8,6 +8,8 @@ import { cn } from '@/lib/cn';
 
 export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   home: House,
+  card: CreditCard,
+  send: Send,
   clock: Clock,
   settings: Settings,
 };
@@ -29,6 +31,7 @@ export function BottomNav() {
           <Link
             key={item.label}
             href={item.href}
+            aria-label={item.label}
             aria-current={active ? 'page' : undefined}
             className={cn(
               'type-caption flex h-16 flex-1 flex-col items-center justify-center gap-1',
@@ -36,7 +39,7 @@ export function BottomNav() {
             )}
           >
             <Icon aria-hidden="true" size={24} strokeWidth={1.75} />
-            {item.label}
+            {item.shortLabel ?? item.label}
           </Link>
         );
       })}

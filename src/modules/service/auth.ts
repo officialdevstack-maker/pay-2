@@ -113,3 +113,13 @@ export async function authenticateService(request: Request): Promise<ServiceCall
   }
   return { clientId: verified.clientId, product };
 }
+
+/** Checkout callers are mapped to a merchant row by the caller, never trusted from the request body. */
+export async function authenticateMerchant(request: Request): Promise<{ clientId: string }> {
+  const verified = await verify(bearerToken(request));
+  if (!verified) throw unauthenticated();
+  if (!verified.scopes.includes(SERVICE_API.checkoutScope)) {
+    throw new AppError('FORBIDDEN', 'This client is not allowed to create checkout sessions.', 403);
+  }
+  return { clientId: verified.clientId };
+}

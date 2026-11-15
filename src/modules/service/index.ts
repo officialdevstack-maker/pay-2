@@ -1,5 +1,5 @@
 export { serviceRoute } from './route';
-export { authenticateService } from './auth';
+export { authenticateMerchant, authenticateService } from './auth';
 export {
   getWalletBalance,
   listActivity,

@@ -14,4 +14,9 @@ describe('isNavActive', () => {
     expect(isNavActive('/activity/SPY_8K2M4Q7X1ZA9B3CD', item('Activity'))).toBe(true);
     expect(isNavActive('/activityx', item('Activity'))).toBe(false);
   });
+
+  it('matches payment methods route and its subpaths', () => {
+    expect(isNavActive('/payment-methods', item('Payment methods'))).toBe(true);
+    expect(isNavActive('/payment-methods/add', item('Payment methods'))).toBe(true);
+  });
 });

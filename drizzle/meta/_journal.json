@@ -50,6 +50,13 @@
       "when": 1794639162697,
       "tag": "0006_third_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794775076825,
+      "tag": "0007_salty_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

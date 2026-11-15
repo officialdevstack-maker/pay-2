@@ -5,6 +5,8 @@ export type ServiceProduct = (typeof SERVICE_PRODUCTS)[number];
 export const SERVICE_API = {
   /** Scope an Accounts-issued token must carry. Grant it to service clients only, never to end-user clients. */
   requiredScope: 'pay:service',
+  /** Scope a Spurs product or approved merchant client needs to create checkout sessions. */
+  checkoutScope: 'pay:checkout',
   /** How long an "active" introspection answer is trusted. Bounds revocation lag. */
   introspectionCacheSeconds: 30,
   maxCacheEntries: 1_000,

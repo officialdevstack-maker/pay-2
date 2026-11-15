@@ -204,8 +204,8 @@ Wallet is a separate service. It calls Pay for money movement and shares Account
 - [ ] Optional: push (PWA) later
 
 ### Phase 9: UI/UX pass (runs alongside, locked in here)
-- [ ] Home: payment-method summary, Add payment method action, setup requirements, recent payments
-- [ ] Payment methods: Wallet availability, tokenized saved cards, bank transfer option; no Pay balance or Add money page
+- [x] Home: payment-method summary, Add payment method action, setup requirements, recent payments
+- [x] Payment methods: Wallet availability, tokenized saved cards, bank transfer option; no Pay balance or Add money page
 - [ ] Checkout: responsive method selection and method-specific states
 - [ ] Activity and payment detail/receipt
 - [ ] Settings: Accounts profile link, appearance, sign out; no Pay tag or PIN

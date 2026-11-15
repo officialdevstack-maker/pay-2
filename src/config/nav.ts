@@ -1,7 +1,9 @@
-export type NavIcon = 'home' | 'clock' | 'settings';
+export type NavIcon = 'home' | 'card' | 'send' | 'clock' | 'settings';
 
 export interface NavItem {
   label: string;
+  /** Used where space is tight, such as the mobile tab bar. */
+  shortLabel?: string;
   href: string;
   icon: NavIcon;
   /** Flip to true when the route ships. Unbuilt routes are hidden, never greyed out. */
@@ -11,7 +13,9 @@ export interface NavItem {
 }
 
 export const NAV: readonly NavItem[] = [
-  { label: 'Home', href: '/', icon: 'home', ready: true },
+  { label: 'Home', href: '/', icon: 'home', ready: true, also: ['/add-money'] },
+  { label: 'Payment methods', shortLabel: 'Methods', href: '/payment-methods', icon: 'card', ready: true },
+  { label: 'Pay', href: '/pay', icon: 'send', ready: false },
   { label: 'Activity', href: '/activity', icon: 'clock', ready: true },
   { label: 'Settings', href: '/settings', icon: 'settings', ready: true },
 ];

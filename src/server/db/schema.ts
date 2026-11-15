@@ -297,3 +297,81 @@ export const notifications = pgTable(
     index('notifications_user_unread_idx').on(t.userId).where(sql`${t.readAt} is null`),
   ],
 );
+
+export const merchants = pgTable(
+  'merchants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    clientId: text('client_id').notNull().unique(),
+    ledgerAccountId: uuid('ledger_account_id')
+      .notNull()
+      .unique()
+      .references(() => ledgerAccounts.id),
+    returnUrl: text('return_url').notNull(),
+    status: text('status').$type<'active' | 'suspended'>().notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check('merchants_status_chk', sql`${t.status} in ('active', 'suspended')`),
+    check('merchants_return_url_chk', sql`${t.returnUrl} ~ '^https?://'`),
+  ],
+);
+
+export const checkoutSessions = pgTable(
+  'checkout_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reference: text('reference').notNull().unique(),
+    merchantId: uuid('merchant_id')
+      .notNull()
+      .references(() => merchants.id),
+    merchantReference: text('merchant_reference').notNull(),
+    description: text('description'),
+    amount: bigint('amount', { mode: 'bigint' }).notNull(),
+    currency: text('currency').notNull().default('NGN'),
+    status: text('status').$type<'open' | 'paid' | 'cancelled'>().notNull().default('open'),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    transactionId: uuid('transaction_id').references(() => transactions.id),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('checkout_sessions_merchant_key_uq').on(t.merchantId, t.idempotencyKey),
+    index('checkout_sessions_merchant_idx').on(t.merchantId, t.createdAt),
+    check('checkout_sessions_reference_chk', sql`${t.reference} ~ '^SPY_[A-Z0-9]{16}$'`),
+    check('checkout_sessions_amount_chk', sql`${t.amount} > 0`),
+    check('checkout_sessions_currency_chk', sql`${t.currency} = 'NGN'`),
+    check('checkout_sessions_status_chk', sql`${t.status} in ('open', 'paid', 'cancelled')`),
+    check('checkout_sessions_paid_chk', sql`(${t.status} = 'paid') = (${t.transactionId} is not null)`),
+  ],
+);
+
+export const paymentMethods = pgTable(
+  'payment_methods',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => payUsers.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<'card'>().notNull().default('card'),
+    brand: text('brand').$type<'visa' | 'mastercard' | 'verve'>().notNull(),
+    last4: text('last4').notNull(),
+    expMonth: integer('exp_month').notNull(),
+    expYear: integer('exp_year').notNull(),
+    status: text('status').$type<'active' | 'needs_attention'>().notNull().default('active'),
+    token: text('token').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('payment_methods_user_token_uq').on(t.userId, t.token),
+    index('payment_methods_user_idx').on(t.userId),
+    check('payment_methods_kind_chk', sql`${t.kind} in ('card')`),
+    check('payment_methods_brand_chk', sql`${t.brand} in ('visa', 'mastercard', 'verve')`),
+    check('payment_methods_last4_chk', sql`${t.last4} ~ '^[0-9]{4}$'`),
+    check('payment_methods_exp_chk', sql`${t.expMonth} between 1 and 12 and ${t.expYear} between 2000 and 2100`),
+    check('payment_methods_status_chk', sql`${t.status} in ('active', 'needs_attention')`),
+  ],
+);
