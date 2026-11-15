@@ -1,6 +1,7 @@
 import 'server-only';
-import { SpursAuth } from '@spurs/auth';
+// import { SpursAuth } from '@spurs/auth';
 import { env } from '@/env';
+import { SpursAuth } from '@spurs/auth';
 
 export function authClient() {
   return new SpursAuth({
