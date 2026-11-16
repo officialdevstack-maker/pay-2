@@ -40,6 +40,12 @@ describe('env', () => {
     await expect(load({ SESSION_SECRET: 'short' })).rejects.toThrow(/SESSION_SECRET/);
   });
 
+  it('requires both notification service credentials together', async () => {
+    await expect(load({ NOTIFICATIONS_SERVICE_URL: 'https://admin.test' })).rejects.toThrow(
+      /Configure both notification service URL and API key/,
+    );
+  });
+
   it('rejects a short internal admin secret', async () => {
     await expect(load({ INTERNAL_SHARED_SECRET: 'short' })).rejects.toThrow(
       /INTERNAL_SHARED_SECRET/,

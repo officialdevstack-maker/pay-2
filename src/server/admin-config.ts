@@ -39,6 +39,9 @@ async function fetchAdminPayConfig(): Promise<Record<string, string>> {
   let response: Response;
   try {
     const url = new URL(env.ADMIN_CONFIG_URL);
+    if (env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+      throw unavailable();
+    }
     url.searchParams.set('app', 'pay');
     response = await fetch(url, {
       headers: { 'x-admin-bootstrap': env.ADMIN_BOOTSTRAP_SECRET },

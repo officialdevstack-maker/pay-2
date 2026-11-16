@@ -52,9 +52,12 @@ to browser code or include it in source control.
 ## Payment provider credentials
 
 The active provider and its credentials are managed in Admin 2 under **Pay providers**.
-Pay fetches the encrypted `pay` config from Admin 2's `GET /api/config?app=pay`
-endpoint using `ADMIN_CONFIG_URL` and `ADMIN_BOOTSTRAP_SECRET`; set both in Pay's
-server environment. Provider API keys and webhook signing secrets should not be set
-in Pay's environment. `PAYMENTS_WEBHOOK_TOKEN` remains only for the legacy
-`/api/hooks/payments/[token]` route; Admin 2's generated webhook URL uses the
-database-managed provider webhook secret at `/api/webhooks/provider`.
+Credentials are encrypted in Admin's database and decrypted only for the authenticated
+Pay server. Pay fetches the `pay` runtime config from Admin 2's `GET /api/config?app=pay`
+endpoint using `ADMIN_CONFIG_URL` and `ADMIN_BOOTSTRAP_SECRET`; set both in Pay's server
+environment, and set the matching `ADMIN_BOOTSTRAP_SECRET` in Admin 2.
+Set `SETTINGS_ENCRYPTION_KEY` in Admin 2 to a base64-encoded 32-byte key (for example,
+generated with `openssl rand -base64 32`). Provider API keys and webhook signing
+secrets should not be set in Pay's environment. `PAYMENTS_WEBHOOK_TOKEN` remains only
+for the legacy `/api/hooks/payments/[token]` route; Admin 2's generated webhook URL
+uses the database-managed provider webhook secret at `/api/webhooks/provider`.

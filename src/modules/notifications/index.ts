@@ -64,6 +64,28 @@ function notificationUrl(): URL {
   return new URL('/api/v1/notifications', env.NOTIFICATIONS_SERVICE_URL);
 }
 
+function isRemoteNotification(value: unknown): value is RemoteNotification {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'type' in value &&
+    typeof value.type === 'string' &&
+    'notifiableId' in value &&
+    typeof value.notifiableId === 'string' &&
+    'data' in value &&
+    value.data !== null &&
+    typeof value.data === 'object' &&
+    'readAt' in value &&
+    (typeof value.readAt === 'string' || value.readAt === null) &&
+    'createdAt' in value &&
+    typeof value.createdAt === 'string' &&
+    'updatedAt' in value &&
+    typeof value.updatedAt === 'string'
+  );
+}
+
 export async function notify(userId: string, input: NotificationInput): Promise<void> {
   const channels: {
     database: { data: Record<string, unknown> };
@@ -108,8 +130,10 @@ export async function listNotifications(
   url.searchParams.set('limit', String(options.limit ?? 50));
   if (options.unreadOnly) url.searchParams.set('unreadOnly', 'true');
   const data = await notificationApi('GET', url);
-  if (!Array.isArray(data)) throw new AppError('INTERNAL', 'Notification service returned an invalid inbox.');
-  return data as RemoteNotification[];
+  if (!Array.isArray(data) || !data.every(isRemoteNotification)) {
+    throw new AppError('INTERNAL', 'Notification service returned an invalid inbox.');
+  }
+  return data;
 }
 
 export async function markNotificationRead(notificationId: string, userId: string): Promise<void> {

@@ -46,6 +46,25 @@ describe('admin payment config', () => {
     expect((options as RequestInit).headers).toEqual({ 'x-admin-bootstrap': 'b'.repeat(32) });
   });
 
+  it('does not send the bootstrap secret over HTTP in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DATABASE_URL', 'postgres://user:password@localhost/pay');
+    vi.stubEnv('PIN_PEPPER', 'p'.repeat(32));
+    vi.stubEnv('CONTACT_PEPPER', 'c'.repeat(32));
+    vi.stubEnv('EMAIL_DRIVER', 'smtp');
+    vi.stubEnv('SMTP_URL', 'smtp://localhost');
+    vi.stubEnv('EMAIL_FROM', 'pay@example.test');
+    vi.stubEnv('PAYMENTS_WEBHOOK_TOKEN', 'w'.repeat(24));
+    vi.stubEnv('ADMIN_CONFIG_URL', 'http://admin.test/api/config');
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const { getAdminPayConfig } = await import('./admin-config');
+
+    await expect(getAdminPayConfig()).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('accepts only the active provider webhook token', async () => {
     stubConfigResponse();
     const { verifyProviderWebhookToken } = await import('./admin-config');
