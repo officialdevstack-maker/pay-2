@@ -4,8 +4,6 @@ import { db } from '@/server/db/client';
 import { checkoutSessions, merchants, payUsers } from '@/server/db/schema';
 import type { AdminCheckoutStatus } from './query';
 
-const SESSION_STATUSES = ['open', 'paid', 'cancelled', 'expired'] as const;
-
 export async function getAdminStats() {
   const [users, merchantRows, sessionRows] = await Promise.all([
     db.select({ total: count() }).from(payUsers),
@@ -16,7 +14,7 @@ export async function getAdminStats() {
       .groupBy(checkoutSessions.status),
   ]);
 
-  const checkouts: Record<(typeof SESSION_STATUSES)[number], number> = {
+  const checkouts: Record<AdminCheckoutStatus, number> = {
     open: 0,
     paid: 0,
     cancelled: 0,

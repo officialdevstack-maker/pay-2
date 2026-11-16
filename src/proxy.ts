@@ -8,6 +8,7 @@ export function proxy(request: NextRequest) {
     path.startsWith('/auth/') ||
     path === '/signed-out' ||
     path.startsWith('/api/hooks/') ||
+    path.startsWith('/api/internal/') ||
     path.startsWith('/api/service/')
   ) {
     return NextResponse.next();

@@ -5,7 +5,7 @@ import { AppError } from '@/lib/errors';
 import { rateLimit } from '@/lib/rate-limit';
 import { route } from '@/lib/request';
 
-function matchesSecret(expected: string, supplied: string | null) {
+export function matchesSecret(expected: string, supplied: string | null) {
   if (!supplied) return false;
   const expectedBytes = Buffer.from(expected);
   const suppliedBytes = Buffer.from(supplied);
