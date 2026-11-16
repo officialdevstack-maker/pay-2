@@ -41,6 +41,12 @@ describe('env', () => {
     await expect(load({ SESSION_SECRET: 'short' })).rejects.toThrow(/SESSION_SECRET/);
   });
 
+  it('rejects a short internal admin secret', async () => {
+    await expect(load({ INTERNAL_SHARED_SECRET: 'short' })).rejects.toThrow(
+      /INTERNAL_SHARED_SECRET/,
+    );
+  });
+
   it('requires an Accounts client secret', async () => {
     await expect(load({ ACCOUNTS_CLIENT_SECRET: '' })).rejects.toThrow(/ACCOUNTS_CLIENT_SECRET/);
   });

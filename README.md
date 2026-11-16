@@ -37,3 +37,14 @@ Do these in order. Each step ends with the checklist in `ui-quality-checklist.md
 - Wallet authorization and funding service contracts; do not read Wallet's database.
 - A profile/verification read for actual checkout prerequisites. Do not use the legacy tag/PIN checklist.
 - Decisions listed in section 13 of `docs/product-spec.md`, especially Wallet debit/PIN ownership and card tokenization.
+
+## Internal admin API
+
+The read-only `GET /api/internal/admin/stats` and
+`GET /api/internal/admin/checkouts` endpoints provide Admin 2 with Pay user and
+merchant totals, checkout status totals, and recent checkout metadata. They are
+authenticated with the `x-internal-secret` header and rate-limited to 120 requests
+per minute. Set `INTERNAL_SHARED_SECRET` to at least 32 random characters in Pay's
+server environment, then set the same value as `PAY_INTERNAL_SECRET` in Admin 2.
+Configure `PAY_API_URL` in Admin 2 to the Pay app origin. Do not expose either secret
+to browser code or include it in source control.
