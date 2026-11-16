@@ -83,6 +83,8 @@ export const mockProvider: PaymentProvider = {
     return expected.length === actual.length && timingSafeEqual(expected, actual);
   },
 
+  confirmEvent: async () => true,
+
   parseWebhook(rawBody): ProviderEvent | null {
     let body: unknown;
     try {
@@ -97,12 +99,16 @@ export const mockProvider: PaymentProvider = {
 
     switch (b.type) {
       case 'funding.received': {
-        if (typeof b.accountNumber !== 'string' || typeof b.amountKobo !== 'string') return null;
+        if (typeof b.amountKobo !== 'string') return null;
         if (!/^\d{1,15}$/.test(b.amountKobo)) return null;
+        const accountNumber = typeof b.accountNumber === 'string' ? b.accountNumber : null;
+        const reference = typeof b.reference === 'string' ? b.reference : undefined;
+        if (!accountNumber && !reference) return null;
         return {
           ...base,
           type: 'funding.received',
-          accountNumber: b.accountNumber,
+          accountNumber,
+          reference,
           amount: BigInt(b.amountKobo),
           senderName: typeof b.senderName === 'string' ? b.senderName : null,
         };

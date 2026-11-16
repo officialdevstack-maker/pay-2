@@ -47,11 +47,12 @@ integration('checkout bank transfer settlement', () => {
     return { ledgerAccountId, session, accountNumber };
   }
 
-  const event = (accountNumber: string, amount: bigint) => ({
+  const event = (accountNumber: string | null, amount: bigint, reference?: string) => ({
     type: 'funding.received' as const,
     eventId: `evt_${randomUUID()}`,
     occurredAt: new Date(),
     accountNumber,
+    reference,
     amount,
     senderName: null,
   });
@@ -78,6 +79,17 @@ integration('checkout bank transfer settlement', () => {
     expect(await getBalance(ledgerAccountId)).toBe(0n);
     const [row] = await db.select().from(checkoutSessions).where(eq(checkoutSessions.id, session.id));
     expect(row?.status).toBe('open');
+  });
+
+  it('matches a provider reference when the account number is missing', async () => {
+    const { ledgerAccountId, session, accountNumber } = await setup(64_000n);
+    const referenceEvent = event(null, 64_000n, session.reference);
+
+    expect(await run(referenceEvent)).toBe('matched');
+    expect(await getBalance(ledgerAccountId)).toBe(64_000n);
+    const [row] = await db.select().from(checkoutSessions).where(eq(checkoutSessions.id, session.id));
+    expect(row?.status).toBe('paid');
+    expect(accountNumber).toMatch(/^98\d{8}$/);
   });
 
   it('leaves unknown accounts for another handler', async () => {

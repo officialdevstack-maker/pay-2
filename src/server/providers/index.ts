@@ -10,6 +10,7 @@ export { isBrandSafe } from './brand';
 /** Add one line per adapter. This is the only place drivers are registered. */
 const DRIVERS: Record<string, () => Promise<PaymentProvider>> = {
   mock: async () => (await import('./mock')).mockProvider,
+  flutterwave: async () => (await import('./flutterwave')).flutterwaveProvider,
 };
 
 let cached: Promise<PaymentProvider> | undefined;

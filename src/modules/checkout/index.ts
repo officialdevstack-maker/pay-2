@@ -10,6 +10,7 @@ export {
   type CheckoutMethod,
 } from './attempts';
 export { createSession, findMerchantByClient } from './create';
+export { expireStaleAttempts } from './expire';
 export { parseAttemptKey, parseCreateSession, SESSION_ID } from './input';
 export { checkoutRoute } from './route';
 export { settleSession } from './settle';

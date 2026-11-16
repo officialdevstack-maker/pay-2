@@ -1,5 +1,5 @@
 import 'server-only';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { AppError } from '@/lib/errors';
 import { post, systemAccountId } from '@/modules/ledger';
 import type { Tx } from '@/server/db/client';
@@ -26,11 +26,19 @@ async function toSuspense(tx: Tx, event: Funding, reason: string): Promise<void>
 }
 
 export async function handleCheckoutFunding(event: Funding, tx: Tx): Promise<'matched' | 'unmatched'> {
+  const where = event.accountNumber || event.reference
+    ? or(
+        event.accountNumber ? eq(checkoutTransfers.accountNumber, event.accountNumber) : undefined,
+        event.reference ? eq(checkoutSessions.reference, event.reference) : undefined,
+      )
+    : undefined;
+  if (!where) return 'unmatched';
+
   const [row] = await tx
     .select({ sessionId: checkoutTransfers.sessionId, amount: checkoutSessions.amount })
     .from(checkoutTransfers)
     .innerJoin(checkoutSessions, eq(checkoutSessions.id, checkoutTransfers.sessionId))
-    .where(eq(checkoutTransfers.accountNumber, event.accountNumber))
+    .where(where)
     .limit(1);
   if (!row) return 'unmatched';
 

@@ -7,6 +7,7 @@ const schema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     APP_URL: z.url(),
     DATABASE_URL: z.string().optional().default(''),
+    CRON_SECRET: z.string().default(''),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
     PIN_PEPPER: z.string().min(32, 'PIN_PEPPER must be at least 32 characters').optional(),
     ACCOUNTS_ISSUER: z.url(),

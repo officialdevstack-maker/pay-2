@@ -10,20 +10,17 @@ import { formatActivityTime } from '@/lib/datetime';
 import { ACTIVITY_FILTERS, listActivity, parseFilter } from '@/modules/activity';
 import { requireUser } from '@/modules/identity';
 
-function labelForFilter(filter: (typeof ACTIVITY_FILTERS)[number]) {
-  switch (filter) {
-    case 'all':
-      return 'All';
-    case 'sent':
-      return 'Sent';
-    case 'received':
-      return 'Received';
-    default:
-      return filter;
-  }
-}
+const FILTER_LABEL: Record<(typeof ACTIVITY_FILTERS)[number], string> = {
+  all: 'All',
+  paid: 'Paid',
+  pending: 'Processing',
+};
 
-export default async function ActivityPage({ searchParams }: { searchParams?: Promise<{ filter?: string }> | { filter?: string } }) {
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ filter?: string }> | { filter?: string };
+}) {
   const user = await requireUser();
   const params = await Promise.resolve(searchParams ?? {});
   const filter = parseFilter(params.filter);
@@ -35,7 +32,7 @@ export default async function ActivityPage({ searchParams }: { searchParams?: Pr
       <Segmented
         label="Activity filters"
         items={ACTIVITY_FILTERS.map((item) => ({
-          label: labelForFilter(item),
+          label: FILTER_LABEL[item],
           href: `/activity?filter=${item}`,
           active: item === filter,
         }))}
@@ -50,10 +47,9 @@ export default async function ActivityPage({ searchParams }: { searchParams?: Pr
           {items.map((item) => (
             <ListRow
               key={item.reference}
-              leading={null}
               title={item.title}
               subtitle={`${item.label} · ${formatActivityTime(item.createdAt)}`}
-              trailing={<AmountDisplay kobo={item.amount} sign={item.kind} />}
+              trailing={<AmountDisplay kobo={item.amount} />}
               href={`/activity/${encodeURIComponent(item.reference)}`}
             />
           ))}

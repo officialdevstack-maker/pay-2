@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { db } from '@/server/db/client';
 import { webhookEvents } from '@/server/db/schema';
-import { getProvider, type ProviderEvent } from '@/server/providers';
+import { getProvider, mapProviderError, type ProviderEvent } from '@/server/providers';
 import { getHandler } from './handlers';
 
 /**
@@ -19,6 +19,19 @@ export async function ingestWebhook(rawBody: string, headers: Headers): Promise<
 
   const event = provider.parseWebhook(rawBody);
   if (!event) return;
+
+  if (provider.confirmEvent) {
+    let confirmed: boolean;
+    try {
+      confirmed = await provider.confirmEvent(event);
+    } catch (error) {
+      throw mapProviderError(error);
+    }
+    if (!confirmed) {
+      logger.warn('webhook event failed provider confirmation', { type: event.type, eventId: event.eventId });
+      return;
+    }
+  }
 
   const [row] = await db
     .insert(webhookEvents)

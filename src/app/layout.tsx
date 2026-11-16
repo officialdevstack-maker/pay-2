@@ -25,8 +25,8 @@ const inter = Inter({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-NG">
-      <body className={`antialiased ${inter.variable}`}>{children}</body>
+    <html lang="en-NG" className={inter.variable}>
+      <body className="min-h-screen bg-background text-foreground antialiased">{children}</body>
     </html>
   );
 }

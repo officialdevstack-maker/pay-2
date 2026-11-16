@@ -46,7 +46,10 @@ interface BaseEvent {
 export type ProviderEvent =
   | (BaseEvent & {
       type: 'funding.received';
-      accountNumber: string;
+      /** Virtual account that received the money, when the provider reports it. */
+      accountNumber: string | null;
+      /** Our own session reference, when the provider echoes it back. */
+      reference?: string | null;
       amount: Kobo;
       senderName: string | null;
     })
@@ -73,4 +76,10 @@ export interface PaymentProvider {
   verifyWebhook(rawBody: string, headers: Headers): boolean;
   /** Returns null for events we do not care about. */
   parseWebhook(rawBody: string): ProviderEvent | null;
+  /**
+   * Optional. Re-checks an event with the provider's own API before we act on it.
+   * Return false to drop a forged or inconsistent event. Throw a ProviderError
+   * (TIMEOUT / UNAVAILABLE) to make the provider retry the webhook later.
+   */
+  confirmEvent?(event: ProviderEvent): Promise<boolean>;
 }
