@@ -48,3 +48,13 @@ per minute. Set `INTERNAL_SHARED_SECRET` to at least 32 random characters in Pay
 server environment, then set the same value as `PAY_INTERNAL_SECRET` in Admin 2.
 Configure `PAY_API_URL` in Admin 2 to the Pay app origin. Do not expose either secret
 to browser code or include it in source control.
+
+## Payment provider credentials
+
+The active provider and its credentials are managed in Admin 2 under **Pay providers**.
+Pay fetches the encrypted `pay` config from Admin 2's `GET /api/config?app=pay`
+endpoint using `ADMIN_CONFIG_URL` and `ADMIN_BOOTSTRAP_SECRET`; set both in Pay's
+server environment. Provider API keys and webhook signing secrets should not be set
+in Pay's environment. `PAYMENTS_WEBHOOK_TOKEN` remains only for the legacy
+`/api/hooks/payments/[token]` route; Admin 2's generated webhook URL uses the
+database-managed provider webhook secret at `/api/webhooks/provider`.

@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 function tokenMatches(given: string): boolean {
   const expected = env.PAYMENTS_WEBHOOK_TOKEN;
   if (!expected) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const provided = Buffer.from(given);
+  const configured = Buffer.from(expected);
+  return provided.length === configured.length && timingSafeEqual(provided, configured);
 }
 
 export const POST = route<{ params: Promise<{ token: string }> }>(async (request, { params }) => {

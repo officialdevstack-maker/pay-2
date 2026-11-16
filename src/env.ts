@@ -15,11 +15,10 @@ const schema = z
     ACCOUNTS_CLIENT_ID: z.string().min(1),
     ACCOUNTS_CLIENT_SECRET: z.string().min(1),
     SERVICE_CLIENTS: z.string().default(''),
-    PAYMENTS_DRIVER: z.string().min(1).default('mock'),
-    PAYMENTS_SECRET_KEY: z.string().default(''),
-    PAYMENTS_PUBLIC_KEY: z.string().default(''),
-    PAYMENTS_ENCRYPTION_KEY: z.string().default(''),
-    PAYMENTS_WEBHOOK_HASH: z.string().default(''),
+    ADMIN_CONFIG_URL: z.union([z.url(), z.literal('')]).default(''),
+    ADMIN_BOOTSTRAP_SECRET: z.string().default(''),
+    NOTIFICATIONS_SERVICE_URL: z.union([z.url(), z.literal('')]).default(''),
+    NOTIFICATIONS_SERVICE_API_KEY: z.string().default(''),
     PAYMENTS_WEBHOOK_TOKEN: z.string().default(''),
     CONTACT_PEPPER: z.string().min(32, 'CONTACT_PEPPER must be at least 32 characters').optional(),
     EMAIL_DRIVER: z.enum(['log', 'smtp']).default('log'),
@@ -27,6 +26,14 @@ const schema = z
     EMAIL_FROM: z.string().default(''),
   })
   .superRefine((value, ctx) => {
+    if (Boolean(value.NOTIFICATIONS_SERVICE_URL) !== Boolean(value.NOTIFICATIONS_SERVICE_API_KEY)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['NOTIFICATIONS_SERVICE_API_KEY'],
+        message: 'Configure both notification service URL and API key.',
+      });
+    }
+
     if (value.INTERNAL_SHARED_SECRET && value.INTERNAL_SHARED_SECRET.length < 32) {
       ctx.addIssue({
         code: 'custom',
@@ -79,11 +86,27 @@ const schema = z
       }
     }
 
-    if (value.NODE_ENV === 'production' && value.PAYMENTS_DRIVER === 'mock') {
+    if (value.NODE_ENV === 'production' && !value.ADMIN_CONFIG_URL) {
       ctx.addIssue({
         code: 'custom',
-        path: ['PAYMENTS_DRIVER'],
-        message: 'The mock driver is not allowed in production.',
+        path: ['ADMIN_CONFIG_URL'],
+        message: 'ADMIN_CONFIG_URL is required in production.',
+      });
+    }
+
+    if (value.NODE_ENV === 'production' && value.ADMIN_BOOTSTRAP_SECRET.length < 32) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ADMIN_BOOTSTRAP_SECRET'],
+        message: 'ADMIN_BOOTSTRAP_SECRET must be at least 32 characters in production.',
+      });
+    }
+
+    if (value.NODE_ENV === 'production' && value.PAYMENTS_WEBHOOK_TOKEN.length < 24) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYMENTS_WEBHOOK_TOKEN'],
+        message: 'Use at least 24 random characters.',
       });
     }
 
@@ -102,25 +125,6 @@ const schema = z
       });
     }
 
-    if (value.PAYMENTS_DRIVER !== 'mock') {
-      for (const key of ['PAYMENTS_SECRET_KEY', 'PAYMENTS_WEBHOOK_HASH'] as const) {
-        if (!value[key]) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [key],
-            message: `${key} is required for this driver.`,
-          });
-        }
-      }
-
-      if (value.PAYMENTS_WEBHOOK_TOKEN.length < 24) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['PAYMENTS_WEBHOOK_TOKEN'],
-          message: 'Use at least 24 random characters.',
-        });
-      }
-    }
   });
 
 const parsed = schema.safeParse(process.env);

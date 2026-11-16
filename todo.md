@@ -28,7 +28,7 @@ Tick items as they land. Do not start a phase until the previous phase's "Done w
 - [ ] Card entry is tokenized/embedded; raw PAN and CVV never reach Pay. Resolve the provider-brand conflict before enabling card checkout.
 - [x] Webhook route is neutral (`/api/hooks/payments/[token]`), with an unguessable path token plus signature verification.
 - [x] CI check: build, then grep `.next/static` and the HTML for provider names, failing on any match.
-- [ ] Swapping the provider must require **zero changes outside** `src/server/providers/`, one env value (`PAYMENTS_DRIVER`), and credentials. (Only the mock exists; prove it with the first real adapter.)
+- [x] The active provider and its credentials are read from Admin 2's encrypted config store; only the Admin config endpoint/bootstrap secret remain in Pay's environment.
 
 ### Reusability (Wallet is a separate service that calls Pay)
 - [x] Domain logic lives in `src/modules/*` with **no imports from `app/` or React**. UI calls modules; modules never call UI.
@@ -82,7 +82,7 @@ src/
   server/
     providers/
       types.ts              # PaymentProvider interface + normalised events
-      index.ts              # resolves driver from PAYMENTS_DRIVER
+      index.ts              # resolves provider and credentials from Admin config
       <driver>/             # the ONLY place provider names appear
     db/                     # client, schema, migrations
     jobs/
@@ -141,7 +141,7 @@ src/
 - [x] Normalised event types: `funding.received`, `payout.succeeded`, `payout.failed`, `payout.reversed`
 - [x] Error mapper: provider error to `AppError` with our codes (`FUNDING_UNAVAILABLE`, `PAYOUT_FAILED`, `ACCOUNT_NOT_FOUND`, ...)
 - [ ] First adapter in `providers/<driver>/` (needs a vendor choice and credentials); plus a **`mock` driver** for tests and local dev (mock done, real adapter not)
-- [x] `providers/index.ts` picks the driver from `PAYMENTS_DRIVER`; nothing else imports an adapter
+- [x] `providers/index.ts` picks the provider from Admin config; nothing else imports an adapter
 - [x] Webhook entry: verify signature, store raw event in `webhook_events` (unique by provider event id), process, return 200 fast
 - [x] Idempotent event processor: replays never double-credit
 - [x] Outbound calls: timeouts, retries with backoff, circuit-breaker logging (`providerFetch`)

@@ -1,23 +1,33 @@
 import 'server-only';
 import { env } from '@/env';
 import { AppError } from '@/lib/errors';
+import { getAdminPayConfig } from '@/server/admin-config';
 import type { PaymentProvider } from './types';
 
 export type { PaymentProvider, ProviderEvent, ProviderEventType } from './types';
 export { mapProviderError, ProviderError } from './errors';
 export { isBrandSafe } from './brand';
 
-/** Add one line per adapter. This is the only place drivers are registered. */
-const DRIVERS: Record<string, () => Promise<PaymentProvider>> = {
-  mock: async () => (await import('./mock')).mockProvider,
-  flutterwave: async () => (await import('./flutterwave')).flutterwaveProvider,
-};
+/** Credentials and the active provider are resolved from Admin's encrypted config store. */
+export async function getProvider(): Promise<PaymentProvider> {
+  const config = await getAdminPayConfig();
+  const provider = config.PAY_PROVIDER || 'sandbox';
 
-let cached: Promise<PaymentProvider> | undefined;
+  if (provider === 'sandbox') {
+    if (env.NODE_ENV === 'production') {
+      throw new AppError('SERVICE_UNAVAILABLE', 'Payments are not configured.', 503);
+    }
+    return (await import('./mock')).mockProvider;
+  }
+  if (provider === 'flutterwave') {
+    const secretKey = config.PAY_FLUTTERWAVE_SECRET_KEY ?? '';
+    const webhookHash = config.PAY_FLUTTERWAVE_WEBHOOK_SECRET ?? '';
+    if (!secretKey || !webhookHash) {
+      throw new AppError('SERVICE_UNAVAILABLE', 'Payment provider credentials are not configured.', 503);
+    }
+    const { createFlutterwaveProvider } = await import('./flutterwave');
+    return createFlutterwaveProvider({ secretKey, webhookHash });
+  }
 
-/** Resolved lazily so builds and CI never need a live adapter. */
-export function getProvider(): Promise<PaymentProvider> {
-  const load = DRIVERS[env.PAYMENTS_DRIVER];
-  if (!load) throw new AppError('SERVICE_UNAVAILABLE', 'Payments are not configured.', 503);
-  return (cached ??= load());
+  throw new AppError('SERVICE_UNAVAILABLE', 'The configured payment provider is not supported.', 503);
 }

@@ -29,9 +29,8 @@ jobs:
       ACCOUNTS_ISSUER: https://accounts.example.test/api/oidc
       ACCOUNTS_CLIENT_ID: ci
       ACCOUNTS_CLIENT_SECRET: ci
-      PAYMENTS_DRIVER: ci-placeholder
-      PAYMENTS_SECRET_KEY: ci
-      PAYMENTS_WEBHOOK_HASH: ci
+      ADMIN_CONFIG_URL: https://admin.example.test/api/config
+      ADMIN_BOOTSTRAP_SECRET: ci-only-admin-bootstrap-secret-ci
       PAYMENTS_WEBHOOK_TOKEN: ci-only-webhook-token-0123456789
     steps:
       - uses: actions/checkout@v4

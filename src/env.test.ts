@@ -9,7 +9,6 @@ const GOOD = {
   ACCOUNTS_ISSUER: 'https://accounts.test/api/oidc',
   ACCOUNTS_CLIENT_ID: 'id',
   ACCOUNTS_CLIENT_SECRET: 'secret',
-  PAYMENTS_DRIVER: 'mock',
   SERVICE_CLIENTS: '',
 };
 
@@ -27,7 +26,7 @@ describe('env', () => {
     'accepts a valid configuration',
     async () => {
       const { env } = await load();
-      expect(env.PAYMENTS_DRIVER).toBe('mock');
+      expect(env.ADMIN_CONFIG_URL).toBe('');
     },
     15_000,
   );
@@ -51,12 +50,8 @@ describe('env', () => {
     await expect(load({ ACCOUNTS_CLIENT_SECRET: '' })).rejects.toThrow(/ACCOUNTS_CLIENT_SECRET/);
   });
 
-  it('refuses the mock driver in production', async () => {
-    await expect(load({ NODE_ENV: 'production' })).rejects.toThrow(/mock driver/);
-  });
-
-  it('requires credentials for a real driver', async () => {
-    await expect(load({ PAYMENTS_DRIVER: 'placeholder' })).rejects.toThrow(/PAYMENTS_SECRET_KEY/);
+  it('requires the Admin config endpoint and bootstrap secret in production', async () => {
+    await expect(load({ NODE_ENV: 'production' })).rejects.toThrow(/ADMIN_CONFIG_URL/);
   });
 
   it('refuses a service client that would act as pay', async () => {

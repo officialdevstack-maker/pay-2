@@ -21,7 +21,7 @@ const body = JSON.stringify({
   amountKobo: kobo.toString(),
   senderName: 'Test Sender',
 });
-const secret = process.env.PAYMENTS_WEBHOOK_HASH || 'mock-webhook-secret';
+const secret = 'mock-webhook-secret';
 const signature = createHmac('sha256', secret).update(body).digest('hex');
 
 const base = process.env.APP_URL ?? 'http://localhost:3000';

@@ -1,14 +1,13 @@
 import 'server-only';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { env } from '@/env';
 import { ProviderError } from '../errors';
 import type { PaymentProvider, ProviderEvent, TransferResult } from '../types';
 
-const SECRET = () => env.PAYMENTS_WEBHOOK_HASH || 'mock-webhook-secret';
+const SECRET = 'mock-webhook-secret';
 export const MOCK_SIGNATURE_HEADER = 'x-signature';
 
 export function signMockWebhook(rawBody: string): string {
-  return createHmac('sha256', SECRET()).update(rawBody).digest('hex');
+  return createHmac('sha256', SECRET).update(rawBody).digest('hex');
 }
 
 const transfers = new Map<string, TransferResult>();
