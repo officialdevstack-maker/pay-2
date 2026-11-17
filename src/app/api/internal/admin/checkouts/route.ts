@@ -6,8 +6,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const GET = internalAdminRoute(async (request) => {
-  const { limit, status } = parseAdminCheckoutsQuery(
+  const filters = parseAdminCheckoutsQuery(
     new URL(request.url).searchParams,
   );
-  return Response.json({ data: await listAdminCheckouts(limit, status) });
+  return Response.json(await listAdminCheckouts(filters));
 });
