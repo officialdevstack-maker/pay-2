@@ -9,6 +9,7 @@ const GOOD = {
   ACCOUNTS_ISSUER: 'https://accounts.test/api/oidc',
   ACCOUNTS_CLIENT_ID: 'id',
   ACCOUNTS_CLIENT_SECRET: 'secret',
+  ADMIN_IDENTITY_PUBLIC_KEY: '',
   SERVICE_CLIENTS: '',
 };
 
@@ -46,18 +47,16 @@ describe('env', () => {
     );
   });
 
-  it('rejects a short internal admin secret', async () => {
-    await expect(load({ INTERNAL_SHARED_SECRET: 'short' })).rejects.toThrow(
-      /INTERNAL_SHARED_SECRET/,
-    );
-  });
-
   it('requires an Accounts client secret', async () => {
     await expect(load({ ACCOUNTS_CLIENT_SECRET: '' })).rejects.toThrow(/ACCOUNTS_CLIENT_SECRET/);
   });
 
   it('requires the Admin config endpoint and bootstrap secret in production', async () => {
     await expect(load({ NODE_ENV: 'production' })).rejects.toThrow(/ADMIN_CONFIG_URL/);
+  });
+
+  it('requires the Admin identity verification key in production', async () => {
+    await expect(load({ NODE_ENV: 'production' })).rejects.toThrow(/ADMIN_IDENTITY_PUBLIC_KEY/);
   });
 
   it('refuses a service client that would act as pay', async () => {

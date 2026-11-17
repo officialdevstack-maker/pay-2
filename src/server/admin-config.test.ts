@@ -55,6 +55,7 @@ describe('admin payment config', () => {
     vi.stubEnv('SMTP_URL', 'smtp://localhost');
     vi.stubEnv('EMAIL_FROM', 'pay@example.test');
     vi.stubEnv('PAYMENTS_WEBHOOK_TOKEN', 'w'.repeat(24));
+    vi.stubEnv('ADMIN_IDENTITY_PUBLIC_KEY', 'test public key');
     vi.stubEnv('ADMIN_CONFIG_URL', 'http://admin.test/api/config');
 
     const fetchMock = vi.fn();

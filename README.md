@@ -43,11 +43,16 @@ Do these in order. Each step ends with the checklist in `ui-quality-checklist.md
 The read-only `GET /api/internal/admin/stats` and
 `GET /api/internal/admin/checkouts` endpoints provide Admin 2 with Pay user and
 merchant totals, checkout status totals, and recent checkout metadata. They are
-authenticated with the `x-internal-secret` header and rate-limited to 120 requests
-per minute. Set `INTERNAL_SHARED_SECRET` to at least 32 random characters in Pay's
-server environment, then set the same value as `PAY_INTERNAL_SECRET` in Admin 2.
-Configure `PAY_API_URL` in Admin 2 to the Pay app origin. Do not expose either secret
-to browser code or include it in source control.
+authenticated with short-lived RS256 Admin 2 assertions and rate-limited to 120
+requests per minute per admin. Configure the matching RSA public key as
+`ADMIN_IDENTITY_PUBLIC_KEY` in Pay and the private key as
+`PAY_ADMIN_IDENTITY_PRIVATE_KEY` in Admin 2. A shared secret by itself is not accepted
+for internal admin requests.
+
+Internal write routes must use `internalAdminWriteRoute`, require `pay.write` or
+`pay.approve`, recent re-authentication (`auth_time` within 300 seconds), an audit
+reason, and a request ID. Configure `PAY_API_URL` in Admin 2 to the Pay app origin.
+Do not expose either key to browser code or include it in source control.
 
 ## Payment provider credentials
 

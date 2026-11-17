@@ -9,7 +9,7 @@ const schema = z
     DATABASE_URL: z.string().optional().default(''),
     CRON_SECRET: z.string().default(''),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
-    INTERNAL_SHARED_SECRET: z.string().default(''),
+    ADMIN_IDENTITY_PUBLIC_KEY: z.string().default(''),
     PIN_PEPPER: z.string().min(32, 'PIN_PEPPER must be at least 32 characters').optional(),
     ACCOUNTS_ISSUER: z.url(),
     ACCOUNTS_CLIENT_ID: z.string().min(1),
@@ -31,14 +31,6 @@ const schema = z
         code: 'custom',
         path: ['NOTIFICATIONS_SERVICE_API_KEY'],
         message: 'Configure both notification service URL and API key.',
-      });
-    }
-
-    if (value.INTERNAL_SHARED_SECRET && value.INTERNAL_SHARED_SECRET.length < 32) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['INTERNAL_SHARED_SECRET'],
-        message: 'INTERNAL_SHARED_SECRET must be at least 32 characters.',
       });
     }
 
@@ -99,6 +91,14 @@ const schema = z
         code: 'custom',
         path: ['ADMIN_BOOTSTRAP_SECRET'],
         message: 'ADMIN_BOOTSTRAP_SECRET must be at least 32 characters in production.',
+      });
+    }
+
+    if (value.NODE_ENV === 'production' && !value.ADMIN_IDENTITY_PUBLIC_KEY.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ADMIN_IDENTITY_PUBLIC_KEY'],
+        message: 'ADMIN_IDENTITY_PUBLIC_KEY is required in production.',
       });
     }
 
