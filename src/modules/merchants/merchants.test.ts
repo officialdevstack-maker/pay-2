@@ -5,6 +5,7 @@ import { db } from '@/server/db/client';
 import { merchantEvents } from '@/server/db/schema';
 import type { AdminIdentity } from '@/modules/admin/identity';
 import type { AdminWriteAudit } from '@/modules/admin/internal-route';
+import { findMerchantByClient } from '@/modules/checkout/create';
 import { createMerchant, createMerchantInput, transitionMerchant } from './index';
 
 const hasTestDatabase =
@@ -49,6 +50,9 @@ integration('merchant lifecycle', () => {
     const merchant = await create();
     expect(merchant.status).toBe('pending');
     expect(merchant.returnUrl).toBe('https://merchant.example.test/return');
+    await expect(findMerchantByClient(merchant.clientId)).rejects.toMatchObject({
+      code: 'MERCHANT_UNAVAILABLE',
+    });
 
     const events = await db.select().from(merchantEvents).where(eq(merchantEvents.merchantId, merchant.id));
     expect(events).toHaveLength(1);
