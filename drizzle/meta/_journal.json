@@ -78,6 +78,13 @@
       "when": 1794897975487,
       "tag": "0010_ambiguous_maginty",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794899712259,
+      "tag": "0011_solid_vindicator",
+      "breakpoints": true
     }
   ]
 }

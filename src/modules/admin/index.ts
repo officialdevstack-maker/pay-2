@@ -245,6 +245,23 @@ export async function listAdminMerchants(input: {
   return rows;
 }
 
+export async function getAdminMerchant(id: string) {
+  const [merchant] = await db
+    .select({
+      id: merchants.id,
+      name: merchants.name,
+      clientId: merchants.clientId,
+      returnUrl: merchants.returnUrl,
+      status: merchants.status,
+      approvedAt: merchants.approvedAt,
+      createdAt: merchants.createdAt,
+    })
+    .from(merchants)
+    .where(eq(merchants.id, id))
+    .limit(1);
+  return merchant ?? null;
+}
+
 export async function listAdminWebhookEvents(input: {
   limit: number;
   status: 'received' | 'processed' | 'failed' | null;

@@ -1,9 +1,10 @@
 import 'server-only';
 import { asc, eq } from 'drizzle-orm';
 import { db, type Tx } from '@/server/db/client';
-import { ledgerEntries, transactions } from '@/server/db/schema';
+import { checkoutSessions, ledgerEntries, merchants, transactions } from '@/server/db/schema';
 import { isUniqueViolation } from '@/lib/db-errors';
 import { AppError } from '@/lib/errors';
+import { enqueueMerchantWebhook } from '@/modules/merchant-webhooks';
 import { post } from './post';
 import type { PostedTransaction } from './types';
 
@@ -35,7 +36,7 @@ async function run(tx: Tx, input: ReverseInput): Promise<PostedTransaction> {
     .orderBy(asc(ledgerEntries.id));
 
   try {
-    return await post(
+    const reversal = await post(
       {
         type: 'reversal',
         currency: original.currency,
@@ -50,6 +51,40 @@ async function run(tx: Tx, input: ReverseInput): Promise<PostedTransaction> {
       },
       tx,
     );
+    const [checkout] = await tx
+      .select({
+        session: checkoutSessions,
+        merchant: merchants,
+      })
+      .from(checkoutSessions)
+      .innerJoin(merchants, eq(merchants.id, checkoutSessions.merchantId))
+      .where(eq(checkoutSessions.transactionId, original.id))
+      .limit(1);
+    if (checkout) {
+      await enqueueMerchantWebhook(tx, {
+        merchantId: checkout.merchant.id,
+        eventType: 'payment.reversed',
+        eventKey: `payment.reversed:${reversal.id}`,
+        payload: {
+          id: `payment.reversed:${reversal.id}`,
+          type: 'payment.reversed',
+          createdAt: reversal.createdAt.toISOString(),
+          data: {
+            merchantId: checkout.merchant.id,
+            merchantName: checkout.merchant.name,
+            checkoutReference: checkout.session.reference,
+            merchantReference: checkout.session.merchantReference,
+            transactionReference: reversal.reference,
+            originalTransactionReference: original.reference,
+            amount: checkout.session.amount.toString(),
+            currency: checkout.session.currency,
+            reversedAt: reversal.createdAt.toISOString(),
+            reason: input.reason ?? null,
+          },
+        },
+      });
+    }
+    return reversal;
   } catch (error) {
     if (isUniqueViolation(error, 'transactions_reverses_uq')) {
       throw new AppError('ALREADY_REVERSED', 'This transaction was already reversed.', 409);

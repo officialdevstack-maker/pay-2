@@ -12,6 +12,7 @@ import { db } from '@/server/db/client';
 import { ledgerAccounts, merchantEvents, merchants } from '@/server/db/schema';
 
 export const createMerchantInput = z.object({
+  id: z.uuid().optional(),
   name: z.string().trim().min(2, 'Enter the merchant name.').max(120, 'Merchant name is too long.'),
   clientId: z
     .string()
@@ -85,6 +86,7 @@ export async function createMerchant(
       const [merchant] = await tx
         .insert(merchants)
         .values({
+          ...(input.id ? { id: input.id } : {}),
           name: input.name,
           clientId: input.clientId,
           returnUrl,

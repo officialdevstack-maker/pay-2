@@ -339,6 +339,88 @@ export const merchantEvents = pgTable(
   (t) => [index('merchant_events_merchant_idx').on(t.merchantId, t.createdAt)],
 );
 
+export const merchantWebhookConfigs = pgTable(
+  'merchant_webhook_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    merchantId: uuid('merchant_id').notNull().unique().references(() => merchants.id),
+    url: text('url').notNull(),
+    signingSecretEncrypted: text('signing_secret_encrypted').notNull(),
+    eventTypes: jsonb('event_types').$type<string[]>().notNull(),
+    maxAttempts: integer('max_attempts').notNull().default(8),
+    enabled: boolean('enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check('merchant_webhook_max_attempts_chk', sql`${t.maxAttempts} between 1 and 8`)],
+);
+
+export const merchantWebhookDeliveries = pgTable(
+  'merchant_webhook_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    merchantId: uuid('merchant_id').notNull().references(() => merchants.id),
+    eventKey: text('event_key').notNull().unique(),
+    eventType: text('event_type').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    status: text('status').$type<'pending' | 'sending' | 'delivered' | 'failed'>().notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    lastStatusCode: integer('last_status_code'),
+    lastError: text('last_error'),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('merchant_webhook_deliveries_due_idx').on(t.status, t.nextAttemptAt),
+    index('merchant_webhook_deliveries_merchant_idx').on(t.merchantId, t.createdAt),
+    check('merchant_webhook_deliveries_status_chk', sql`${t.status} in ('pending', 'sending', 'delivered', 'failed')`),
+    check('merchant_webhook_deliveries_attempts_chk', sql`${t.attempts} >= 0`),
+  ],
+);
+
+export const merchantWebhookAttempts = pgTable(
+  'merchant_webhook_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    deliveryId: uuid('delivery_id').notNull().references(() => merchantWebhookDeliveries.id),
+    attemptNumber: integer('attempt_number').notNull(),
+    status: text('status').$type<'pending' | 'delivered' | 'failed'>().notNull().default('pending'),
+    responseStatus: integer('response_status'),
+    error: text('error'),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('merchant_webhook_attempts_delivery_idx').on(t.deliveryId, t.attemptedAt),
+    check('merchant_webhook_attempts_number_chk', sql`${t.attemptNumber} > 0`),
+    check('merchant_webhook_attempts_status_chk', sql`${t.status} in ('pending', 'delivered', 'failed')`),
+  ],
+);
+
+export const merchantOnboarding = pgTable(
+  'merchant_onboarding',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    merchantId: uuid('merchant_id').notNull().unique().references(() => merchants.id),
+    checklist: jsonb('checklist')
+      .$type<{ registrationVerified: boolean; ownershipVerified: boolean; settlementAccountVerified: boolean; riskReviewComplete: boolean }>()
+      .notNull()
+      .default({
+        registrationVerified: false,
+        ownershipVerified: false,
+        settlementAccountVerified: false,
+        riskReviewComplete: false,
+      }),
+    dueDiligenceNotes: text('due_diligence_notes').notNull().default(''),
+    updatedBy: integer('updated_by').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('merchant_onboarding_merchant_idx').on(t.merchantId, t.updatedAt)],
+);
+
 export const checkoutSessions = pgTable(
   'checkout_sessions',
   {

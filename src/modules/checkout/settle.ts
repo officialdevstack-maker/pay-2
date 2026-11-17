@@ -4,6 +4,7 @@ import { AppError } from '@/lib/errors';
 import { post, systemAccountId } from '@/modules/ledger';
 import { db, type Tx } from '@/server/db/client';
 import { checkoutAttempts, checkoutSessions, merchants } from '@/server/db/schema';
+import { enqueueMerchantWebhook } from '@/modules/merchant-webhooks';
 import type { CheckoutMethod } from './attempts';
 
 export async function settleSession(
@@ -65,10 +66,32 @@ async function run(tx: Tx, sessionId: string, idempotencyKey: string, method: Ch
     tx,
   );
 
+  const paidAt = new Date();
   await tx
     .update(checkoutSessions)
-    .set({ status: 'paid', transactionId: posted.id, paidAt: new Date() })
+    .set({ status: 'paid', transactionId: posted.id, paidAt })
     .where(eq(checkoutSessions.id, session.id));
+
+  await enqueueMerchantWebhook(tx, {
+    merchantId: merchant.id,
+    eventType: 'payment.succeeded',
+    eventKey: `payment.succeeded:${session.id}`,
+    payload: {
+      id: `payment.succeeded:${session.id}`,
+      type: 'payment.succeeded',
+      createdAt: paidAt.toISOString(),
+      data: {
+        merchantId: merchant.id,
+        merchantName: merchant.name,
+        checkoutReference: session.reference,
+        merchantReference: session.merchantReference,
+        transactionReference: posted.reference,
+        amount: session.amount.toString(),
+        currency: session.currency,
+        paidAt: paidAt.toISOString(),
+      },
+    },
+  });
 
   return { reference: session.reference, replayed: false };
 }
