@@ -1,6 +1,5 @@
 import 'server-only';
 import { and, count, desc, eq, gte, ilike, lt, lte, or, sql } from 'drizzle-orm';
-import { AppError } from '@/lib/errors';
 import { db } from '@/server/db/client';
 import {
   checkoutAttempts,
@@ -64,6 +63,7 @@ export async function listAdminCheckouts(
     currency: checkoutSessions.currency,
     status: checkoutSessions.status,
     createdAt: checkoutSessions.createdAt,
+    cursorCreatedAt: sql<string>`to_char(${checkoutSessions.createdAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
     paidAt: checkoutSessions.paidAt,
   };
 
@@ -75,9 +75,9 @@ export async function listAdminCheckouts(
     filters.reference ? ilike(checkoutSessions.reference, `%${filters.reference}%`) : undefined,
     filters.cursor
       ? or(
-          lt(checkoutSessions.createdAt, filters.cursor.createdAt),
+          sql`${checkoutSessions.createdAt} < ${filters.cursor.createdAt}::timestamptz`,
           and(
-            eq(checkoutSessions.createdAt, filters.cursor.createdAt),
+            sql`${checkoutSessions.createdAt} = ${filters.cursor.createdAt}::timestamptz`,
             lt(checkoutSessions.reference, filters.cursor.reference),
           ),
         )
@@ -95,12 +95,15 @@ export async function listAdminCheckouts(
   const last = page.at(-1);
 
   return {
-    data: page.map((row) => ({
-    ...row,
-    amount: row.amount.toString(),
+    data: page.map(({ cursorCreatedAt: _cursorCreatedAt, ...row }) => ({
+      ...row,
+      amount: row.amount.toString(),
     })),
     nextCursor: hasMore && last
-      ? encodeAdminCheckoutCursor({ createdAt: last.createdAt, reference: last.reference })
+      ? encodeAdminCheckoutCursor({
+          createdAt: last.cursorCreatedAt,
+          reference: last.reference,
+        })
       : null,
   };
 }
@@ -182,7 +185,18 @@ export async function getAdminCheckout(reference: string) {
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return {
-    session: { ...session, amount: session.amount.toString() },
+    session: {
+      reference: session.reference,
+      merchantName: session.merchantName,
+      merchantReference: session.merchantReference,
+      description: session.description,
+      amount: session.amount.toString(),
+      currency: session.currency,
+      status: session.status,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      paidAt: session.paidAt,
+    },
     attempts,
     transaction: ledgerTransaction
       ? {

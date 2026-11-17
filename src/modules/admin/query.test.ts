@@ -24,7 +24,7 @@ describe('parseAdminCheckoutsQuery', () => {
   });
 
   it('parses filters and round-trips the stable cursor', () => {
-    const cursor = { createdAt: new Date('2026-01-02T03:04:05.000Z'), reference: 'SPY_1234567890ABCDEF' };
+    const cursor = { createdAt: '2026-01-02T03:04:05.123456Z', reference: 'SPY_1234567890ABCDEF' };
     const encoded = encodeAdminCheckoutCursor(cursor);
     expect(decodeAdminCheckoutCursor(encoded)).toEqual(cursor);
     expect(
@@ -38,6 +38,9 @@ describe('parseAdminCheckoutsQuery', () => {
       reference: 'SPY',
       cursor,
     });
+    expect(
+      parseAdminCheckoutsQuery(new URLSearchParams('to=2026-01-31')).to?.toISOString(),
+    ).toBe('2026-01-31T23:59:59.999Z');
   });
 
   it('rejects invalid limits and statuses', () => {
@@ -48,6 +51,9 @@ describe('parseAdminCheckoutsQuery', () => {
       /Status is not supported/,
     );
     expect(() => parseAdminCheckoutsQuery(new URLSearchParams('from=invalid'))).toThrow(
+      /from must be a valid date/,
+    );
+    expect(() => parseAdminCheckoutsQuery(new URLSearchParams('from=2026-02-31'))).toThrow(
       /from must be a valid date/,
     );
     expect(() => parseAdminCheckoutsQuery(new URLSearchParams('from=2026-02-01&to=2026-01-01'))).toThrow(
