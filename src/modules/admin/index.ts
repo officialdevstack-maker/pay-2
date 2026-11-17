@@ -95,9 +95,16 @@ export async function listAdminCheckouts(
   const last = page.at(-1);
 
   return {
-    data: page.map(({ cursorCreatedAt: _cursorCreatedAt, ...row }) => ({
-      ...row,
+    data: page.map((row) => ({
+      reference: row.reference,
+      merchantName: row.merchantName,
+      merchantReference: row.merchantReference,
+      description: row.description,
       amount: row.amount.toString(),
+      currency: row.currency,
+      status: row.status,
+      createdAt: row.createdAt,
+      paidAt: row.paidAt,
     })),
     nextCursor: hasMore && last
       ? encodeAdminCheckoutCursor({
@@ -210,14 +217,17 @@ export async function getAdminCheckout(reference: string) {
 
 export async function listAdminMerchants(input: {
   limit: number;
-  status: 'active' | 'suspended' | null;
+  status: 'pending' | 'active' | 'suspended' | null;
   search: string | null;
 }) {
   const rows = await db
     .select({
       id: merchants.id,
       name: merchants.name,
+      clientId: merchants.clientId,
+      returnUrl: merchants.returnUrl,
       status: merchants.status,
+      approvedAt: merchants.approvedAt,
       createdAt: merchants.createdAt,
       checkoutCount: sql<number>`count(${checkoutSessions.id})::int`,
       paidCheckoutCount: sql<number>`count(${checkoutSessions.id}) filter (where ${checkoutSessions.status} = 'paid')::int`,

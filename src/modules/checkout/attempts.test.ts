@@ -33,6 +33,7 @@ integration('checkout attempts', () => {
         clientId: `client-${randomUUID()}`,
         ledgerAccountId,
         returnUrl: 'https://store.example.test/return',
+        status: 'active',
       })
       .returning();
     if (!merchant) throw new Error('Merchant could not be created.');

@@ -309,13 +309,34 @@ export const merchants = pgTable(
       .unique()
       .references(() => ledgerAccounts.id),
     returnUrl: text('return_url').notNull(),
-    status: text('status').$type<'active' | 'suspended'>().notNull().default('active'),
+    status: text('status').$type<'pending' | 'active' | 'suspended'>().notNull().default('pending'),
+    createdBy: integer('created_by'),
+    approvedBy: integer('approved_by'),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    check('merchants_status_chk', sql`${t.status} in ('active', 'suspended')`),
+    check('merchants_status_chk', sql`${t.status} in ('pending', 'active', 'suspended')`),
     check('merchants_return_url_chk', sql`${t.returnUrl} ~ '^https?://'`),
   ],
+);
+
+export const merchantEvents = pgTable(
+  'merchant_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    merchantId: uuid('merchant_id').notNull().references(() => merchants.id),
+    action: text('action').notNull(),
+    fromStatus: text('from_status'),
+    toStatus: text('to_status').notNull(),
+    actorId: integer('actor_id').notNull(),
+    actorEmail: text('actor_email').notNull(),
+    reason: text('reason').notNull(),
+    requestId: text('request_id').notNull(),
+    ip: text('ip').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('merchant_events_merchant_idx').on(t.merchantId, t.createdAt)],
 );
 
 export const checkoutSessions = pgTable(

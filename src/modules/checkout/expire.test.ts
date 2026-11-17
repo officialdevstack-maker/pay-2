@@ -29,6 +29,7 @@ integration('stale checkout attempts', () => {
         clientId: `client-${randomUUID()}`,
         ledgerAccountId,
         returnUrl: 'https://store.example.test/return',
+        status: 'active',
       })
       .returning();
     if (!user || !merchant) throw new Error('Fixture failed.');
