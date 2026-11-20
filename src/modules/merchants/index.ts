@@ -8,6 +8,7 @@ import { AppError } from '@/lib/errors';
 import { parseServiceClients } from '@/lib/service-clients';
 import type { AdminIdentity } from '@/modules/admin/identity';
 import type { AdminWriteAudit } from '@/modules/admin/internal-route';
+import { getAdminPayConfig } from '@/server/admin-config';
 import { db } from '@/server/db/client';
 import { ledgerAccounts, merchantEvents, merchants } from '@/server/db/schema';
 
@@ -60,9 +61,16 @@ function normalizeReturnUrl(value: string): string {
   return url.href;
 }
 
-function assertClientIdAllowed(clientId: string) {
-  const registry = parseServiceClients(env.SERVICE_CLIENTS);
-  if (clientId === env.ACCOUNTS_CLIENT_ID || (registry.ok && registry.clients.has(clientId))) {
+async function assertClientIdAllowed(clientId: string) {
+  if (clientId === env.ACCOUNTS_CLIENT_ID) {
+    throw new AppError('VALIDATION_FAILED', 'That client ID is not available.', 422);
+  }
+
+  const raw = env.SERVICE_CLIENTS.trim();
+  const registry = raw
+    ? parseServiceClients(raw)
+    : parseServiceClients((await getAdminPayConfig()).SERVICE_CLIENTS ?? '');
+  if (registry.ok && registry.clients.has(clientId)) {
     throw new AppError('VALIDATION_FAILED', 'That client ID is not available.', 422);
   }
 }
@@ -73,7 +81,7 @@ export async function createMerchant(
   audit: AdminWriteAudit,
 ) {
   const returnUrl = normalizeReturnUrl(input.returnUrl);
-  assertClientIdAllowed(input.clientId);
+  await assertClientIdAllowed(input.clientId);
 
   try {
     return await db.transaction(async (tx) => {

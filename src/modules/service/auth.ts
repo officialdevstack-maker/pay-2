@@ -5,6 +5,7 @@ import { env } from '@/env';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { parseServiceClients, type ClientRegistry } from '@/lib/service-clients';
+import { getAdminPayConfig } from '@/server/admin-config';
 import type { ServiceCaller } from './types';
 
 interface Verified {
@@ -20,12 +21,23 @@ let clients: ClientRegistry | undefined;
 const timeout = () => AbortSignal.timeout(SERVICE_API.httpTimeoutMs);
 const unauthenticated = () => new AppError('UNAUTHENTICATED', 'Service authentication required.', 401);
 
-function registry(): ClientRegistry {
-  if (!clients) {
-    const parsed = parseServiceClients(env.SERVICE_CLIENTS);
+async function registry(): Promise<ClientRegistry> {
+  if (clients) return clients;
+
+  const raw = env.SERVICE_CLIENTS.trim();
+  if (raw) {
+    const parsed = parseServiceClients(raw);
     if (!parsed.ok) throw new AppError('SERVICE_UNAVAILABLE', 'The service API is not configured.', 503);
     clients = parsed.clients;
+    return clients;
   }
+
+  const config = (await getAdminPayConfig()).SERVICE_CLIENTS ?? '';
+  if (!config) return new Map();
+
+  const parsed = parseServiceClients(config);
+  if (!parsed.ok) throw new AppError('SERVICE_UNAVAILABLE', 'The service API is not configured.', 503);
+  clients = parsed.clients;
   return clients;
 }
 
@@ -107,7 +119,7 @@ export async function authenticateService(request: Request): Promise<ServiceCall
   const verified = await verify(bearerToken(request));
   if (!verified) throw unauthenticated();
 
-  const product = registry().get(verified.clientId);
+  const product = (await registry()).get(verified.clientId);
   if (!product || !verified.scopes.includes(SERVICE_API.requiredScope)) {
     throw new AppError('FORBIDDEN', 'This client is not allowed to use the service API.', 403);
   }

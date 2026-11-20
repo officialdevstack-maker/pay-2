@@ -81,6 +81,38 @@ describe('admin payment config', () => {
     ).resolves.toBe(false);
   });
 
+  it('reads runtime policy overrides from Admin config with working defaults', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          app: 'pay',
+          config: {
+            ...config,
+            PAY_CHECKOUT_SESSION_TTL_SECONDS: '7200',
+            PAY_BANK_TRANSFER_GRACE_SECONDS: '43200',
+            PAY_MAX_AMOUNT_KOBO: '7500000000',
+            PAY_METHOD_CARD_TOKENIZATION: 'true',
+            PAY_WALLET_PER_TRANSFER_KOBO: '7000000',
+            PAY_WALLET_DAILY_DEBIT_KOBO: '30000000',
+            PAY_WALLET_MAX_BALANCE_KOBO: '60000000',
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { getPayPolicyConfig } = await import('./admin-config');
+
+    const policy = await getPayPolicyConfig();
+    expect(policy.checkout.sessionTtlSeconds).toBe(7200);
+    expect(policy.checkout.attemptGraceSeconds).toBe(43200);
+    expect(policy.checkout.maxAmountKobo).toBe(7_500_000_000n);
+    expect(policy.features.cardTokenization).toBe(true);
+    expect(policy.walletLimits.pay.perTransferKobo).toBe(7_000_000n);
+    expect(policy.walletLimits.pay.dailyDebitKobo).toBe(30_000_000n);
+    expect(policy.walletLimits.pay.maxBalanceKobo).toBe(60_000_000n);
+  });
+
   it('creates the active provider from Admin credentials', async () => {
     stubConfigResponse();
     const { getProvider } = await import('./providers');

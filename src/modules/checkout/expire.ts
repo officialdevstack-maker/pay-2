@@ -1,15 +1,16 @@
 import 'server-only';
 import { and, eq, inArray, lt } from 'drizzle-orm';
-import { CHECKOUT } from '@/config/checkout';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { db } from '@/server/db/client';
 import { checkoutAttempts, checkoutSessions } from '@/server/db/schema';
+import { getPayPolicyConfig } from '@/server/admin-config';
 import { resolveCheckoutAttempt } from './attempts';
 
 /** Closes unpaid bank-transfer attempts that are past expiry plus the grace window. */
 export async function expireStaleAttempts(limit = 50): Promise<number> {
-  const cutoff = new Date(Date.now() - CHECKOUT.attemptGraceSeconds * 1000);
+  const { checkout } = await getPayPolicyConfig();
+  const cutoff = new Date(Date.now() - checkout.attemptGraceSeconds * 1000);
 
   const stale = await db
     .select({ id: checkoutAttempts.id })

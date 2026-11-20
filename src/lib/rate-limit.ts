@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { RATE_RULES } from '@/config/rate-limits';
 import { AppError } from '@/lib/errors';
 import { db } from '@/server/db/client';
+import { getPayPolicyConfig } from '@/server/admin-config';
 import { rateLimits } from '@/server/db/schema';
 
 export type RateLimitRule = keyof typeof RATE_RULES;
@@ -11,7 +12,10 @@ export type RateLimitRule = keyof typeof RATE_RULES;
 export async function rateLimit(rule: RateLimitRule, identity: string): Promise<void> {
   if (!identity) throw new AppError('BAD_REQUEST', 'Rate-limit identity is required.', 400);
 
-  const config = RATE_RULES[rule];
+  const { rateRules } = await getPayPolicyConfig();
+  const config = rateRules[rule];
+  if (!config) throw new AppError('INTERNAL', 'The rate-limit configuration is unavailable.', 500);
+
   const now = new Date();
   const cutoff = new Date(now.getTime() - config.windowSeconds * 1000);
   const keyHash = createHash('sha256').update(`${rule}\0${identity}`).digest('hex');

@@ -1,9 +1,9 @@
 import 'server-only';
 import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
-import { WALLET_LIMITS } from '@/config/limits';
 import { AppError } from '@/lib/errors';
 import type { Tx } from '@/server/db/client';
 import { ledgerAccounts, ledgerEntries, wallets } from '@/server/db/schema';
+import { getPayPolicyConfig } from '@/server/admin-config';
 import type { Product } from './types';
 
 export async function assertTransferAllowed(
@@ -49,7 +49,8 @@ export async function assertTransferAllowed(
     throw new AppError('WALLET_UNAVAILABLE', 'A wallet is unavailable right now.', 403);
   }
 
-  const limits = WALLET_LIMITS[input.product];
+  const { walletLimits } = await getPayPolicyConfig();
+  const limits = walletLimits[input.product];
   if (input.amount > limits.perTransferKobo) {
     throw new AppError('TRANSFER_LIMIT_EXCEEDED', 'This transfer is above your per-transfer limit.', 422);
   }

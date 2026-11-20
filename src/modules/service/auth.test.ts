@@ -44,6 +44,34 @@ describe('authenticateService', () => {
     expect(introspections).toBe(1);
   });
 
+  it('falls back to the Admin service-client config when the env var is empty', async () => {
+    vi.resetModules();
+    vi.stubEnv('SERVICE_CLIENTS', '');
+    vi.stubEnv('ADMIN_CONFIG_URL', 'https://admin.test/api/config');
+    vi.stubEnv('ADMIN_BOOTSTRAP_SECRET', 'b'.repeat(32));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.endsWith('/.well-known/openid-configuration')) {
+          return Response.json({ introspection_endpoint: 'https://accounts.test/api/oidc/token/introspection' });
+        }
+        if (url === 'https://admin.test/api/config?app=pay') {
+          return Response.json({ app: 'pay', config: { SERVICE_CLIENTS: 'admin-wallet=wallet' } });
+        }
+        return active({ client_id: 'admin-wallet' });
+      }),
+    );
+
+    const { authenticateService } = await import('./auth');
+    await expect(
+      authenticateService(new Request('https://pay.test/api/service/x', {
+        headers: { authorization: `Bearer ${`tok-${randomUUID()}`}` },
+      })),
+    ).resolves.toEqual({ clientId: 'admin-wallet', product: 'wallet' });
+  });
+
   it('rejects missing or malformed credentials without calling Accounts', async () => {
     stubAccounts(() => active());
     for (const authorization of [undefined, 'Basic abc', 'Bearer', 'Bearer a b']) {

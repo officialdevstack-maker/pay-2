@@ -4,14 +4,14 @@ import { RecentActivity } from '@/components/home/recent-activity';
 import { SetupChecklist, type SetupItem } from '@/components/home/setup-checklist';
 import { PaymentMethodsCard } from '@/components/payment-methods/payment-methods-card';
 import { PageLayout } from '@/components/shell/page-layout';
-import { FEATURES } from '@/config/features';
 import { env } from '@/env';
 import { getHomeData } from '@/modules/dashboard';
 import { requireUser } from '@/modules/identity';
+import { getPayPolicyConfig } from '@/server/admin-config';
 
 export default async function HomePage() {
   const user = await requireUser();
-  const data = await getHomeData(user.id);
+  const [data, { features }] = await Promise.all([getHomeData(user.id), getPayPolicyConfig()]);
   const accountsUrl = new URL(env.ACCOUNTS_ISSUER).origin;
 
   const setup: SetupItem[] = user.emailVerified ? [] : [{ label: 'Verify your email', href: accountsUrl }];
@@ -48,7 +48,7 @@ export default async function HomePage() {
               </p>
             ) : null}
           </div>
-          <PaymentMethodsCard methods={data.methods} canAdd={FEATURES.cardTokenization} />
+          <PaymentMethodsCard methods={data.methods} canAdd={features.cardTokenization} />
         </section>
 
         <RecentActivity items={data.activity} />

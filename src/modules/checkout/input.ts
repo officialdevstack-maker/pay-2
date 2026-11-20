@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { CHECKOUT } from '@/config/checkout';
 import { AppError } from '@/lib/errors';
+import { getPayPolicyConfig } from '@/server/admin-config';
 import type { CreateSessionInput } from './types';
 
 const createBody = z.strictObject({
@@ -20,7 +20,7 @@ export function parseAttemptKey(idempotencyKey: string | null): string {
   return idempotencyKey;
 }
 
-export function parseCreateSession(raw: unknown, idempotencyKey: string | null): CreateSessionInput {
+export async function parseCreateSession(raw: unknown, idempotencyKey: string | null): Promise<CreateSessionInput> {
   const parsedIdempotencyKey = parseAttemptKey(idempotencyKey);
 
   const parsed = createBody.safeParse(raw);
@@ -35,8 +35,9 @@ export function parseCreateSession(raw: unknown, idempotencyKey: string | null):
     throw new AppError('VALIDATION_FAILED', 'Check the details and try again.', 422, { fields });
   }
 
+  const { checkout } = await getPayPolicyConfig();
   const amount = BigInt(parsed.data.amountKobo);
-  if (amount > CHECKOUT.maxAmountKobo) {
+  if (amount > checkout.maxAmountKobo) {
     throw new AppError('VALIDATION_FAILED', 'This amount is above the checkout limit.', 422, {
       fields: ['amountKobo'],
     });

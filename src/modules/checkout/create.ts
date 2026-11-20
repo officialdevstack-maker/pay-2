@@ -1,11 +1,11 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { CHECKOUT } from '@/config/checkout';
 import { AppError } from '@/lib/errors';
 import { newReference } from '@/lib/ids';
 import { db } from '@/server/db/client';
 import { checkoutSessions, merchants } from '@/server/db/schema';
+import { getPayPolicyConfig } from '@/server/admin-config';
 import type { CheckoutSession, CreateSessionInput, Merchant } from './types';
 
 export async function findMerchantByClient(clientId: string): Promise<Merchant> {
@@ -27,6 +27,7 @@ export async function createSession(
   input: CreateSessionInput,
 ): Promise<{ session: CheckoutSession; replayed: boolean }> {
   const requestHash = hashOf(input);
+  const { checkout } = await getPayPolicyConfig();
 
   const [created] = await db
     .insert(checkoutSessions)
@@ -38,7 +39,7 @@ export async function createSession(
       amount: input.amount,
       idempotencyKey: input.idempotencyKey,
       requestHash,
-      expiresAt: new Date(Date.now() + CHECKOUT.sessionTtlSeconds * 1000),
+      expiresAt: new Date(Date.now() + checkout.sessionTtlSeconds * 1000),
     })
     .onConflictDoNothing({ target: [checkoutSessions.merchantId, checkoutSessions.idempotencyKey] })
     .returning();

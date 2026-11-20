@@ -6,15 +6,15 @@ import { PageLayout } from '@/components/shell/page-layout';
 import { ListGroup } from '@/components/ui/list-group';
 import { ListRow } from '@/components/ui/list-row';
 import { PageHeader } from '@/components/ui/page-header';
-import { FEATURES } from '@/config/features';
 import { requireUser } from '@/modules/identity';
 import { listPaymentMethods } from '@/modules/payment-methods';
+import { getPayPolicyConfig } from '@/server/admin-config';
 
 export const metadata = { title: 'Payment methods' };
 
 export default async function PaymentMethodsPage() {
   const user = await requireUser();
-  const methods = await listPaymentMethods(user.id);
+  const [methods, { features }] = await Promise.all([listPaymentMethods(user.id), getPayPolicyConfig()]);
   const attention = methods.filter((method) => method.needsAttention).length;
 
   return (
@@ -41,7 +41,7 @@ export default async function PaymentMethodsPage() {
           <h2 id="cards-heading" className="type-heading">
             Cards
           </h2>
-          <PaymentMethodsCard methods={methods} canAdd={FEATURES.cardTokenization} />
+          <PaymentMethodsCard methods={methods} canAdd={features.cardTokenization} />
         </section>
 
         <section aria-labelledby="transfer-heading" className="space-y-3">
