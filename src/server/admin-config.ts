@@ -124,23 +124,54 @@ export async function getPayPolicyConfig(): Promise<{
   };
   rateRules: Record<string, { limit: number; windowSeconds: number }>;
 }> {
-  const config = await getAdminPayConfig().catch(() => ({}));
+  const config = await getAdminPayConfig().catch(() => ({} as Record<string, string>));
 
-  const walletPerTransfer = asBigInt(config, ['PAY_WALLET_PER_TRANSFER_KOBO', 'PAY_PER_TRANSFER_KOBO'], WALLET_LIMITS.pay.perTransferKobo);
-  const walletDailyDebit = asBigInt(config, ['PAY_WALLET_DAILY_DEBIT_KOBO', 'PAY_DAILY_DEBIT_KOBO'], WALLET_LIMITS.pay.dailyDebitKobo);
-  const walletMaxBalance = asBigInt(config, ['PAY_WALLET_MAX_BALANCE_KOBO', 'PAY_MAX_BALANCE_KOBO'], WALLET_LIMITS.pay.maxBalanceKobo);
+  type ManagedPolicy = {
+    fees?: { cardFundingBps?: number };
+    limits?: {
+      perTransferKobo?: string;
+      dailyDebitKobo?: string;
+      maxBalanceKobo?: string;
+      maxCheckoutAmountKobo?: string;
+    };
+    checkout?: { sessionTtlSeconds?: number; attemptGraceSeconds?: number };
+    rateLimits?: Record<string, { limit: number; windowSeconds: number }>;
+  };
+  let managed: ManagedPolicy | null = null;
+  if (config.PAY_POLICY) {
+    try {
+      managed = JSON.parse(config.PAY_POLICY) as ManagedPolicy;
+    } catch {
+      managed = null;
+    }
+  }
+
+  const walletPerTransfer = managed?.limits?.perTransferKobo
+    ? BigInt(managed.limits.perTransferKobo)
+    : asBigInt(config, ['PAY_WALLET_PER_TRANSFER_KOBO', 'PAY_PER_TRANSFER_KOBO'], WALLET_LIMITS.pay.perTransferKobo);
+  const walletDailyDebit = managed?.limits?.dailyDebitKobo
+    ? BigInt(managed.limits.dailyDebitKobo)
+    : asBigInt(config, ['PAY_WALLET_DAILY_DEBIT_KOBO', 'PAY_DAILY_DEBIT_KOBO'], WALLET_LIMITS.pay.dailyDebitKobo);
+  const walletMaxBalance = managed?.limits?.maxBalanceKobo
+    ? BigInt(managed.limits.maxBalanceKobo)
+    : asBigInt(config, ['PAY_WALLET_MAX_BALANCE_KOBO', 'PAY_MAX_BALANCE_KOBO'], WALLET_LIMITS.pay.maxBalanceKobo);
 
   return {
     checkout: {
-      sessionTtlSeconds: asNumber(config, ['PAY_CHECKOUT_SESSION_TTL_SECONDS', 'PAY_CHECKOUT_TTL_SECONDS', 'PAY_SESSION_TTL_SECONDS'], CHECKOUT.sessionTtlSeconds),
-      attemptGraceSeconds: asNumber(config, ['PAY_BANK_TRANSFER_GRACE_SECONDS', 'PAY_ATTEMPT_GRACE_SECONDS', 'PAY_BANK_TRANSFER_GRACE_WINDOW_SECONDS'], CHECKOUT.attemptGraceSeconds),
-      maxAmountKobo: asBigInt(config, ['PAY_MAX_AMOUNT_KOBO', 'PAY_CHECKOUT_MAX_AMOUNT_KOBO'], CHECKOUT.maxAmountKobo),
+      sessionTtlSeconds: managed?.checkout?.sessionTtlSeconds
+        ?? asNumber(config, ['PAY_CHECKOUT_SESSION_TTL_SECONDS', 'PAY_CHECKOUT_TTL_SECONDS', 'PAY_SESSION_TTL_SECONDS'], CHECKOUT.sessionTtlSeconds),
+      attemptGraceSeconds: managed?.checkout?.attemptGraceSeconds
+        ?? asNumber(config, ['PAY_BANK_TRANSFER_GRACE_SECONDS', 'PAY_ATTEMPT_GRACE_SECONDS', 'PAY_BANK_TRANSFER_GRACE_WINDOW_SECONDS'], CHECKOUT.attemptGraceSeconds),
+      maxAmountKobo: managed?.limits?.maxCheckoutAmountKobo
+        ? BigInt(managed.limits.maxCheckoutAmountKobo)
+        : asBigInt(config, ['PAY_MAX_AMOUNT_KOBO', 'PAY_CHECKOUT_MAX_AMOUNT_KOBO'], CHECKOUT.maxAmountKobo),
     },
     features: {
       cardTokenization: asBoolean(config, ['PAY_CARD_TOKENIZATION', 'PAY_METHOD_CARD_TOKENIZATION', 'PAY_CARD_TOKENIZATION_ENABLED'], FEATURES.cardTokenization),
     },
     fees: {
-      cardFundingBps: asNumber(config, ['PAY_CARD_FUNDING_BPS', 'PAY_FEE_CARD_FUNDING_BPS'], FEES.cardFundingBps),
+      cardFundingBps: managed?.fees?.cardFundingBps
+        ?? asNumber(config, ['PAY_CARD_FUNDING_BPS', 'PAY_FEE_CARD_FUNDING_BPS'], FEES.cardFundingBps),
     },
     walletLimits: {
       pay: {
@@ -154,7 +185,7 @@ export async function getPayPolicyConfig(): Promise<{
         maxBalanceKobo: walletMaxBalance,
       },
     },
-    rateRules: RATE_RULES,
+    rateRules: managed?.rateLimits ?? RATE_RULES,
   };
 }
 

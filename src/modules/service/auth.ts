@@ -16,29 +16,24 @@ interface Verified {
 
 const cache = new Map<string, Verified>();
 let introspectionEndpoint: string | undefined;
-let clients: ClientRegistry | undefined;
 
 const timeout = () => AbortSignal.timeout(SERVICE_API.httpTimeoutMs);
 const unauthenticated = () => new AppError('UNAUTHENTICATED', 'Service authentication required.', 401);
 
 async function registry(): Promise<ClientRegistry> {
-  if (clients) return clients;
+  const adminConfig = await getAdminPayConfig();
+  const raw = (adminConfig.SERVICE_CLIENTS ?? '').trim() || env.SERVICE_CLIENTS.trim();
+  if (!raw) return new Map();
 
-  const raw = env.SERVICE_CLIENTS.trim();
-  if (raw) {
-    const parsed = parseServiceClients(raw);
-    if (!parsed.ok) throw new AppError('SERVICE_UNAVAILABLE', 'The service API is not configured.', 503);
-    clients = parsed.clients;
-    return clients;
-  }
-
-  const config = (await getAdminPayConfig()).SERVICE_CLIENTS ?? '';
-  if (!config) return new Map();
-
-  const parsed = parseServiceClients(config);
+  const parsed = parseServiceClients(raw);
   if (!parsed.ok) throw new AppError('SERVICE_UNAVAILABLE', 'The service API is not configured.', 503);
-  clients = parsed.clients;
-  return clients;
+  if (parsed.clients.has(env.ACCOUNTS_CLIENT_ID)) {
+    throw new AppError('SERVICE_UNAVAILABLE', "Pay's own client cannot be granted service access.", 503);
+  }
+  if (parsed.clients.has('pay')) {
+    throw new AppError('SERVICE_UNAVAILABLE', "The pay product cannot be granted service access.", 503);
+  }
+  return parsed.clients;
 }
 
 function bearerToken(request: Request): string {
